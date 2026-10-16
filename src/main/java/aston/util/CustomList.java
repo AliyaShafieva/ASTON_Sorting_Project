@@ -1,6 +1,7 @@
 package aston.util;
 
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 public class CustomList<T> implements Iterable<T> { // T — тип данных, который мы будем хранить
     private Object[] elements;
@@ -29,8 +30,23 @@ public class CustomList<T> implements Iterable<T> { // T — тип данных
         return (T) elements[index];
     }
 
+    public void set(int index, T element){
+        if (index >= size || index < 0) throw new IndexOutOfBoundsException();
+        elements[index] = element;
+    }
+
     public int size() {
         return size;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < size; i++){
+            if (i > 0) sb.append(", ");
+            sb.append(elements[i]);
+        }
+        return  sb.append("]").toString();
     }
 
     @Override
@@ -38,9 +54,27 @@ public class CustomList<T> implements Iterable<T> { // T — тип данных
         return new Iterator<T>() {
             private int cursor = 0;
             @Override
-            public boolean hasNext() { return cursor < size; }
+            public boolean hasNext() {
+                return cursor < size;
+            }
             @Override
-            public T next() { return (T) elements[cursor++]; }
+            @SuppressWarnings("unchecked")
+            public T next() {
+                if (!hasNext()) throw new NoSuchElementException();
+                return (T) elements[cursor++];
+            }
         };
     }
+//    @Override
+//    public Iterator<T> iterator() {
+//        return new Iterator<T>() {
+//            private int cursor = 0;
+//            @Override
+//            public boolean hasNext() { return cursor < size; }
+//            @Override
+//            public T next() { return (T) elements[cursor++]; }
+//        };
+//    }
+
+
 }

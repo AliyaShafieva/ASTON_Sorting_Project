@@ -65,16 +65,7 @@ public class CustomList<T> implements Iterable<T> { // T — тип данных
             }
         };
     }
-//    @Override
-//    public Iterator<T> iterator() {
-//        return new Iterator<T>() {
-//            private int cursor = 0;
-//            @Override
-//            public boolean hasNext() { return cursor < size; }
-//            @Override
-//            public T next() { return (T) elements[cursor++]; }
-//        };
-//    }
+
 
 
 }

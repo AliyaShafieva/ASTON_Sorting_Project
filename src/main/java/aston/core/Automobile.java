@@ -15,6 +15,11 @@ public class Automobile {
     public int getPower() { return power; }
     public int getYear() { return year; }
 
+    @Override
+    public String toString() {
+        return "Automobile{" + "model='" + model + '\'' + ", power=" + power + ", year=" + year + '}';
+    }
+
     public static class Builder {
         private String model;
         private int power;

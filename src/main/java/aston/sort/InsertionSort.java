@@ -1,9 +1,12 @@
 package aston.sort;
 
 import aston.util.CustomList;
-
 import java.util.Comparator;
-
+/// Сортировка **вставками**.
+/// Берёт элементы по одному и вставляет каждый на своё место среди
+/// уже отсортированных, сдвигая большие вправо - как карты в руке.
+///
+/// Равные элементы сохраняют исходный порядок
 public class InsertionSort implements SortStrategy{
     @Override
     public <T> void sort(CustomList<T> list, Comparator<? super T> comparator) {

@@ -3,13 +3,14 @@ package aston.sort;
 import aston.core.Automobile;
 import aston.core.AutomobileComparators;
 import aston.util.CustomList;
+import static aston.sort.SortTestHelper.*;
 
 public class SortStrategyTest {
 
-    private static int passed = 0;
-    private static int failed = 0;
-
     public static void main(String[] args) {
+
+        reset();
+
         SortStrategy[] strategies = {new InsertionSort(), new BubbleSort()};
 
         for (SortStrategy strategy : strategies) {
@@ -27,29 +28,33 @@ public class SortStrategyTest {
             System.out.println();
         }
 
-        System.out.println("Итого: прошло " + passed + ", упало " + failed);
+        printTotal();
     }
 
     // ---------- автомобили ----------
 
     private static void sortsByPower(SortStrategy strategy) {
         CustomList<Automobile> cars = cars();
+        String before = models(cars, Automobile::getPower);
         strategy.sort(cars, AutomobileComparators.BY_POWER);
-        check("по мощности", models(cars), "Lada Kia Audi BMW");
+        check("по мощности", before, models(cars, Automobile::getPower),
+                "Lada(90) Kia(120) Audi(190) BMW(250)");
     }
 
     private static void sortsByModel(SortStrategy strategy) {
         CustomList<Automobile> cars = cars();
+        String before = models(cars);
         strategy.sort(cars, AutomobileComparators.BY_MODEL);
-        check("по модели", models(cars), "Audi BMW Kia Lada");
+        check("по модели", before, models(cars), "Audi BMW Kia Lada");
     }
 
     private static void sortsByYear(SortStrategy strategy) {
         CustomList<Automobile> cars = cars();
+        String before = models(cars, Automobile::getYear);
         strategy.sort(cars, AutomobileComparators.BY_YEAR);
-        check("по году", models(cars), "Audi Lada Kia BMW");
+        check("по году", before, models(cars, Automobile::getYear),
+                "Audi(2012) Lada(2015) Kia(2018) BMW(2020)");
     }
-
     /// Opel и Kia с одинаковой мощностью 120 должны остаться в исходном порядке.
     private static void keepsOrderOfEqualElements(SortStrategy strategy) {
         CustomList<Automobile> cars = new CustomList<>();
@@ -57,65 +62,49 @@ public class SortStrategyTest {
         cars.add(car("BMW", 250, 2020));
         cars.add(car("Kia", 120, 2018));
         cars.add(car("Lada", 90, 2015));
+        String before = models(cars, Automobile::getPower);
         strategy.sort(cars, AutomobileComparators.BY_POWER);
-        check("равные остаются по порядку", models(cars), "Lada Opel Kia BMW");
+        check("равные остаются по порядку", before, models(cars, Automobile::getPower),
+                "Lada(90) Opel(120) Kia(120) BMW(250)");
     }
 
     // ---------- числа и граничные случаи ----------
 
     private static void sortsNumbersWithDuplicates(SortStrategy strategy) {
-        CustomList<Integer> nums = numbers(5, 3, 5, 1, 9, 0);
-        strategy.sort(nums, Integer::compare);
-        check("числа с повторами", text(nums), "0 1 3 5 5 9");
+        sortNumbers(strategy, "числа с повторами", numbers(5, 3, 5, 1, 9, 0), "0 1 3 5 5 9");
     }
 
     private static void sortsAlreadySortedList(SortStrategy strategy) {
-        CustomList<Integer> nums = numbers(1, 2, 3, 4, 5);
-        strategy.sort(nums, Integer::compare);
-        check("уже отсортированный", text(nums), "1 2 3 4 5");
+        sortNumbers(strategy, "уже отсортированный", numbers(1, 2, 3, 4, 5), "1 2 3 4 5");
     }
 
     private static void sortsReversedList(SortStrategy strategy) {
-        CustomList<Integer> nums = numbers(5, 4, 3, 2, 1);
-        strategy.sort(nums, Integer::compare);
-        check("в обратном порядке", text(nums), "1 2 3 4 5");
+        sortNumbers(strategy, "в обратном порядке", numbers(5, 4, 3, 2, 1), "1 2 3 4 5");
     }
-
     /// Больше 10 элементов: CustomList расширяет внутренний массив.
     private static void sortsMoreThanTenElements(SortStrategy strategy) {
-        CustomList<Integer> nums = numbers(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1);
-        strategy.sort(nums, Integer::compare);
-        check("15 элементов", text(nums), "1 2 3 4 5 6 7 8 9 10 11 12 13 14 15");
+        sortNumbers(strategy, "15 элементов",
+                numbers(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1),
+                "1 2 3 4 5 6 7 8 9 10 11 12 13 14 15");
     }
 
     private static void emptyListDoesNotFail(SortStrategy strategy) {
-        CustomList<Integer> nums = numbers();
-        strategy.sort(nums, Integer::compare);
-        check("пустой список", text(nums), "");
+        sortNumbers(strategy, "пустой список", numbers(), "");
     }
 
     private static void singleElementStaysInPlace(SortStrategy strategy) {
-        CustomList<Integer> nums = numbers(42);
+        sortNumbers(strategy, "один элемент", numbers(42), "42");
+    }
+
+    // ---------- данные и общий шаг ----------
+
+    /// Сортирует числа по возрастанию и сверяет результат.
+    private static void sortNumbers(SortStrategy strategy, String name, CustomList<Integer> nums, String expected) {
+        String before = text(nums);
         strategy.sort(nums, Integer::compare);
-        check("один элемент", text(nums), "42");
+        check(name, before, text(nums), expected);
     }
-
-    // ---------- вспомогательное ----------
-
-    private static void check(String name, String actual, String expected) {
-        if (actual.equals(expected)) {
-            passed++;
-            System.out.println("OK    " + name + ": [" + actual + "]");
-        } else {
-            failed++;
-            System.out.println("FAIL  " + name + ": ожидали [" + expected + "], получили [" + actual + "]");
-        }
-    }
-
-    private static Automobile car(String model, int power, int year) {
-        return new Automobile.Builder().model(model).power(power).year(year).build();
-    }
-
+    /// Четыре машины - общие данные для тестов по полям.
     private static CustomList<Automobile> cars() {
         CustomList<Automobile> cars = new CustomList<>();
         cars.add(car("Lada", 90, 2015));
@@ -123,31 +112,5 @@ public class SortStrategyTest {
         cars.add(car("Audi", 190, 2012));
         cars.add(car("Kia", 120, 2018));
         return cars;
-    }
-
-    private static CustomList<Integer> numbers(int... values) {
-        CustomList<Integer> list = new CustomList<>();
-        for (int v : values) {
-            list.add(v);
-        }
-        return list;
-    }
-
-    private static String models(CustomList<Automobile> cars) {
-        StringBuilder sb = new StringBuilder();
-        for (Automobile car : cars) {
-            if (!sb.isEmpty()) sb.append(" ");
-            sb.append(car.getModel());
-        }
-        return sb.toString();
-    }
-
-    private static String text(CustomList<Integer> list) {
-        StringBuilder sb = new StringBuilder();
-        for (Integer n : list) {
-            if (!sb.isEmpty()) sb.append(" ");
-            sb.append(n);
-        }
-        return sb.toString();
     }
 }

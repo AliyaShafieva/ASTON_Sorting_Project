@@ -29,7 +29,7 @@ import java.util.regex.Pattern;
  */
 public final class AutomobileFileReader {
 
-    private static final String DELIMITER = ";";
+    static final String DELIMITER = ";";
     private static final Pattern SPLIT_PATTERN = Pattern.compile(Pattern.quote(DELIMITER));
 
     private AutomobileFileReader() {

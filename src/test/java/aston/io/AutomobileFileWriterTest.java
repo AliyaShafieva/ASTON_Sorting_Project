@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
@@ -21,9 +22,9 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Tests for {@link AutomobileFileWriter}.
  *
- * <p>Round-trip tests use {@link AutomobileFileReader#readAll(String)} and
- * {@link AutomobileFileReader#readAll(Path)} to assert the writer→reader contract
- * end-to-end, not just the byte format.
+ * <p>Round-trip tests use {@link AutomobileFileReader#parse(String)} and
+ * {@link AutomobileFileReader#readAll(Path)} to assert the writer→reader
+ * contract end-to-end, not just the byte format.
  *
  * <p>Tests for the reader's {@code TODO(validation)} block are intentionally
  * absent here — see {@code AutomobileFileReaderTest}.
@@ -52,6 +53,27 @@ class AutomobileFileWriterTest {
 
     private static List<String> readLines(Path p) throws IOException {
         return Files.readAllLines(p, StandardCharsets.UTF_8);
+    }
+
+    /** Runs writeAll(Writer, …) into a fresh StringWriter and returns its output. */
+    private static String writeToString(CustomList<Automobile> autos) throws IOException {
+        StringWriter sw = new StringWriter();
+        AutomobileFileWriter.writeAll(sw, autos);
+        return sw.toString();
+    }
+
+    private static String writeToString(Automobile... autos) throws IOException {
+        return writeToString(list(autos));
+    }
+
+    /** Asserts writeAll(Writer, …) rejects the list with IllegalArgumentException. */
+    private static void assertRejects(CustomList<Automobile> autos) {
+        assertThrows(IllegalArgumentException.class,
+                () -> AutomobileFileWriter.writeAll(new StringWriter(), autos));
+    }
+
+    private static void assertRejects(Automobile... autos) {
+        assertRejects(list(autos));
     }
 
     /** Records flush/close calls — the writer must never trigger them on a caller-owned Writer. */
@@ -97,29 +119,36 @@ class AutomobileFileWriterTest {
             assertEquals(List.of(HEADER, "A;1;2"), readLines(file));
         }
 
+        /** Byte-exact: UTF-8 encoding, LF-only terminator, exactly one header line. */
         @Test
-        void utf8EncodedBytesAndLfOnly(@TempDir Path dir) throws IOException {
+        void writesUtf8LfBytesWithSingleHeader(@TempDir Path dir) throws IOException {
             Path file = dir.resolve("autos.csv");
-            AutomobileFileWriter.writeAll(file, list(auto("Citroën", 120, 2019)));
-            byte[] expected = (HEADER + "\nCitroën;120;2019\n").getBytes(StandardCharsets.UTF_8);
+            AutomobileFileWriter.writeAll(file, list(
+                    auto("Citroën C5", 120, 2019),
+                    auto("BMW X5",     340, 2022)));
+
+            byte[] expected = (
+                    HEADER + "\n" +
+                    "Citroën C5;120;2019\n" +
+                    "BMW X5;340;2022\n"
+            ).getBytes(StandardCharsets.UTF_8);
+
             assertArrayEquals(expected, Files.readAllBytes(file));
         }
 
+        /** Validation must run before any file I/O — missing file not created, existing preserved. */
         @Test
-        void validatesBeforeIo_noFileCreated(@TempDir Path dir) {
-            Path file = dir.resolve("autos.csv");
+        void validationFailureDoesNotTouchFile(@TempDir Path dir) throws IOException {
+            Path missing = dir.resolve("missing.csv");
             assertThrows(IllegalArgumentException.class,
-                    () -> AutomobileFileWriter.writeAll(file, list(auto("bad;model", 1, 2))));
-            assertFalse(Files.exists(file), "file must not be created when validation fails");
-        }
+                    () -> AutomobileFileWriter.writeAll(missing, list(auto("bad;model", 1, 2))));
+            assertFalse(Files.exists(missing), "missing file must not be created");
 
-        @Test
-        void leavesOriginalIntactOnValidationFailure(@TempDir Path dir) throws IOException {
-            Path file = dir.resolve("autos.csv");
-            Files.writeString(file, "original\n");
+            Path existing = dir.resolve("existing.csv");
+            Files.writeString(existing, "original\n");
             assertThrows(IllegalArgumentException.class,
-                    () -> AutomobileFileWriter.writeAll(file, list(auto("bad;model", 1, 2))));
-            assertEquals("original\n", Files.readString(file));
+                    () -> AutomobileFileWriter.writeAll(existing, list(auto("bad;model", 1, 2))));
+            assertEquals("original\n", Files.readString(existing), "existing file must be untouched");
         }
 
         @Test
@@ -132,13 +161,9 @@ class AutomobileFileWriterTest {
         }
 
         @Test
-        void nullPathThrowsNpe() {
+        void rejectsNullArguments(@TempDir Path dir) {
             assertThrows(NullPointerException.class,
                     () -> AutomobileFileWriter.writeAll((Path) null, list()));
-        }
-
-        @Test
-        void nullListThrowsNpe(@TempDir Path dir) {
             assertThrows(NullPointerException.class,
                     () -> AutomobileFileWriter.writeAll(dir.resolve("x"),
                             (CustomList<Automobile>) null));
@@ -153,16 +178,13 @@ class AutomobileFileWriterTest {
 
         @Test
         void writesHeaderAndRecords() throws IOException {
-            StringWriter sw = new StringWriter();
-            AutomobileFileWriter.writeAll(sw, list(auto("A", 1, 2), auto("B", 3, 4)));
-            assertEquals(HEADER + "\nA;1;2\nB;3;4\n", sw.toString());
+            assertEquals(HEADER + "\nA;1;2\nB;3;4\n",
+                    writeToString(auto("A", 1, 2), auto("B", 3, 4)));
         }
 
         @Test
         void emptyListWritesHeaderOnly() throws IOException {
-            StringWriter sw = new StringWriter();
-            AutomobileFileWriter.writeAll(sw, list());
-            assertEquals(HEADER + "\n", sw.toString());
+            assertEquals(HEADER + "\n", writeToString(list()));
         }
 
         @Test
@@ -191,13 +213,9 @@ class AutomobileFileWriterTest {
         }
 
         @Test
-        void nullWriterThrowsNpe() {
+        void rejectsNullArguments() {
             assertThrows(NullPointerException.class,
                     () -> AutomobileFileWriter.writeAll((Writer) null, list()));
-        }
-
-        @Test
-        void nullListThrowsNpe() {
             assertThrows(NullPointerException.class,
                     () -> AutomobileFileWriter.writeAll(new StringWriter(),
                             (CustomList<Automobile>) null));
@@ -225,21 +243,15 @@ class AutomobileFileWriterTest {
         }
 
         @Test
-        void nullAutoPathThrowsNpe(@TempDir Path dir) {
+        void rejectsNullArguments(@TempDir Path dir) {
+            assertThrows(NullPointerException.class,
+                    () -> AutomobileFileWriter.write((Path) null, auto("A", 1, 2)));
             assertThrows(NullPointerException.class,
                     () -> AutomobileFileWriter.write(dir.resolve("x"), (Automobile) null));
-        }
-
-        @Test
-        void nullAutoWriterThrowsNpe() {
-            assertThrows(NullPointerException.class,
-                    () -> AutomobileFileWriter.write(new StringWriter(), (Automobile) null));
-        }
-
-        @Test
-        void nullWriterThrowsNpe() {
             assertThrows(NullPointerException.class,
                     () -> AutomobileFileWriter.write((Writer) null, auto("A", 1, 2)));
+            assertThrows(NullPointerException.class,
+                    () -> AutomobileFileWriter.write(new StringWriter(), (Automobile) null));
         }
     }
 
@@ -290,31 +302,24 @@ class AutomobileFileWriterTest {
         }
 
         @Test
-        void validatesBeforeIo(@TempDir Path dir) {
-            Path file = dir.resolve("autos.csv");
+        void validationFailureDoesNotTouchFile(@TempDir Path dir) throws IOException {
+            Path missing = dir.resolve("missing.csv");
             assertThrows(IllegalArgumentException.class,
-                    () -> AutomobileFileWriter.appendAll(file, list(auto("bad;model", 1, 2))));
-            assertFalse(Files.exists(file));
-        }
+                    () -> AutomobileFileWriter.appendAll(missing, list(auto("bad;model", 1, 2))));
+            assertFalse(Files.exists(missing), "missing file must not be created");
 
-        @Test
-        void leavesExistingFileIntactOnValidationFailure(@TempDir Path dir) throws IOException {
-            Path file = dir.resolve("autos.csv");
+            Path existing = dir.resolve("existing.csv");
             String original = HEADER + "\nold;1;2\n";
-            Files.writeString(file, original);
+            Files.writeString(existing, original);
             assertThrows(IllegalArgumentException.class,
-                    () -> AutomobileFileWriter.appendAll(file, list(auto("bad;model", 1, 2))));
-            assertEquals(original, Files.readString(file));
+                    () -> AutomobileFileWriter.appendAll(existing, list(auto("bad;model", 1, 2))));
+            assertEquals(original, Files.readString(existing), "existing file must be untouched");
         }
 
         @Test
-        void nullPathThrowsNpe() {
+        void rejectsNullArguments(@TempDir Path dir) {
             assertThrows(NullPointerException.class,
                     () -> AutomobileFileWriter.appendAll((Path) null, list()));
-        }
-
-        @Test
-        void nullListThrowsNpe(@TempDir Path dir) {
             assertThrows(NullPointerException.class,
                     () -> AutomobileFileWriter.appendAll(dir.resolve("x"),
                             (CustomList<Automobile>) null));
@@ -327,19 +332,13 @@ class AutomobileFileWriterTest {
     @Nested
     class AppendSingle {
 
+        // "appends to existing file" dropped — same code path as AppendAllPath.noDuplicateHeaderWhenFileNonEmpty
+
         @Test
         void createsFileWithHeader(@TempDir Path dir) throws IOException {
             Path file = dir.resolve("auto.csv");
             AutomobileFileWriter.append(file, auto("A", 1, 2));
             assertEquals(List.of(HEADER, "A;1;2"), readLines(file));
-        }
-
-        @Test
-        void appendsWithoutHeaderWhenFileExists(@TempDir Path dir) throws IOException {
-            Path file = dir.resolve("auto.csv");
-            Files.writeString(file, HEADER + "\nA;1;2\n");
-            AutomobileFileWriter.append(file, auto("B", 3, 4));
-            assertEquals(List.of(HEADER, "A;1;2", "B;3;4"), readLines(file));
         }
 
         @Test
@@ -357,48 +356,28 @@ class AutomobileFileWriterTest {
 
         /** Automobile.Builder accepts any String incl. null/empty — the guard lives in the writer. */
         @ParameterizedTest
+        @NullAndEmptySource
         @ValueSource(strings = {
-                "", " BMW", "BMW ", "#BMW", "BM;W", "BM\nW", "BM\rW"
+                " BMW", "BMW ", "#BMW", "BM;W", "BM\nW", "BM\rW"
         })
         void rejectsInvalidModel(String model) {
-            Automobile a = auto(model, 1, 2);
+            assertRejects(auto(model, 1, 2));
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"BM#W", "BMW X5"})
+        void acceptsValidModelWithSpecialChars(String model) {
+            assertDoesNotThrow(() -> writeToString(auto(model, 1, 2)));
+        }
+
+        @Test
+        void nullAutomobileInListIsRejected(@TempDir Path dir) {
+            CustomList<Automobile> bad = list();
+            bad.add(null); // CustomList accepts null; writer must reject it
+
+            assertRejects(bad);
             assertThrows(IllegalArgumentException.class,
-                    () -> AutomobileFileWriter.writeAll(new StringWriter(), list(a)));
-        }
-
-        @Test
-        void rejectsNullModel() {
-            Automobile a = auto(null, 1, 2); // Builder stores it; writer must reject
-            assertThrows(IllegalArgumentException.class,
-                    () -> AutomobileFileWriter.writeAll(new StringWriter(), list(a)));
-        }
-
-        @Test
-        void acceptsHashNotAtStart() {
-            assertDoesNotThrow(() ->
-                    AutomobileFileWriter.writeAll(new StringWriter(), list(auto("BM#W", 1, 2))));
-        }
-
-        @Test
-        void acceptsInternalSpace() {
-            assertDoesNotThrow(() ->
-                    AutomobileFileWriter.writeAll(new StringWriter(), list(auto("BMW X5", 1, 2))));
-        }
-
-        @Test
-        void nullAutomobileInListIsRejected() {
-            CustomList<Automobile> l = new CustomList<>();
-            l.add(null); // CustomList accepts null; writer must reject it
-            assertThrows(IllegalArgumentException.class,
-                    () -> AutomobileFileWriter.writeAll(new StringWriter(), l));
-        }
-
-        @Test
-        void nullAutomobileInAppendListIsRejected(@TempDir Path dir) {
-            CustomList<Automobile> l = new CustomList<>();
-            l.add(null);
-            assertThrows(IllegalArgumentException.class,
-                    () -> AutomobileFileWriter.appendAll(dir.resolve("x"), l));
+                    () -> AutomobileFileWriter.appendAll(dir.resolve("x"), bad));
         }
     }
 
@@ -441,7 +420,7 @@ class AutomobileFileWriterTest {
             AutomobileFileWriter.writeAll(sw, list(
                     auto("Toyota Camry", 250, 2020))); // second header — must be ignored
 
-            CustomList<Automobile> back = AutomobileFileReader.readAll(sw.toString());
+            CustomList<Automobile> back = AutomobileFileReader.parse(sw.toString());
 
             assertEquals(3, back.size());
             assertAll(
@@ -457,33 +436,11 @@ class AutomobileFileWriterTest {
          */
         @Test
         void modelWithInternalHashRoundTrips() throws IOException {
-            StringWriter sw = new StringWriter();
-            AutomobileFileWriter.writeAll(sw, list(auto("BM#W", 100, 2020)));
-
-            CustomList<Automobile> back = AutomobileFileReader.readAll(sw.toString());
+            CustomList<Automobile> back =
+                    AutomobileFileReader.parse(writeToString(auto("BM#W", 100, 2020)));
 
             assertEquals(1, back.size());
             assertEquals("BM#W", back.get(0).getModel());
-        }
-
-        /** Pins the exact bytes emitted by writeAll(Path, …), independent of reader leniency. */
-        @Test
-        void writerOutputBytes_areExactlyHeaderPlusLfRecords(@TempDir Path dir) throws IOException {
-            Path file = dir.resolve("autos.csv");
-            AutomobileFileWriter.writeAll(file, list(
-                    auto("BMW X5",       340, 2022),
-                    auto("Toyota Camry", 250, 2020)));
-
-            byte[] expected = (
-                    HEADER + "\n" +
-                    "BMW X5;340;2022\n" +
-                    "Toyota Camry;250;2020\n"
-            ).getBytes(StandardCharsets.UTF_8);
-
-            assertArrayEquals(expected, Files.readAllBytes(file));
-            assertEquals(1, Files.readAllLines(file).stream()
-                    .filter(HEADER::equals).count(),
-                    "exactly one header line expected");
         }
     }
 }

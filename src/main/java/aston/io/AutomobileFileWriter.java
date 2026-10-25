@@ -15,9 +15,9 @@ import java.nio.file.StandardOpenOption;
 import java.util.Objects;
 
 /**
- * Writes automobiles in the format read by {@link AutomobileFileReader}
+ * Пишет автомобили в формате, который читает {@link AutomobileFileReader}
  * (UTF-8):
- * 
+ *
  * <pre>
  * # model;power;year
  * BMW X5;340;2022
@@ -25,66 +25,58 @@ import java.util.Objects;
  * </pre>
  *
  * <p>
- * writeAll / write output begins with the # header line;
- * appendAll / append emit the header only when creating a new or empty file.
- * Uses {@code '\n'} as the line terminator so files are byte-identical
- * across OSes.
+ * writeAll / write начинают вывод с заголовка {@code #};
+ * appendAll / append пишут заголовок только при создании нового или пустого файла.
+ * Терминатор строки — {@code '\n'}, чтобы файлы были побайтово одинаковы на всех ОС.
  *
  * <p>
- * Every {@code model} is validated up-front to ensure it round-trips through
- * {@link AutomobileFileReader} unchanged: it must be non-null, non-empty,
- * un-padded,
- * and free of {@code '#'} as first char, {@code ';'}, {@code '\n'},
- * {@code '\r'}.
+ * Каждый {@code model} проверяется заранее, чтобы пройти через
+ * {@link AutomobileFileReader} без искажений: не {@code null}, не пустой,
+ * без пробелов по краям, без {@code '#'} первым символом, без {@code ';'},
+ * {@code '\n'}, {@code '\r'}.
  *
  * <p>
- * The {@link #writeAll(Path, CustomList)} overload validates <b>before</b> any
- * file I/O and writes to a temp file.
- * When the move is performed as a non-atomic operation, and an IOException is
- * thrown, then the state of the files is not defined. The
- * {@link #writeAll(Writer, CustomList)}
- * overload does not provide this property (the caller owns the stream), and
- * emits
- * the {@code #} header on <b>every</b> call, so it is not self-composable for
- * appending; the reader still parses such output correctly (it skips
- * {@code #}-lines).
+ * {@link #writeAll(Path, CustomList)} проверяет данные <b>до</b> любого ввода-вывода
+ * и пишет во временный файл. Если перемещение выполняется не атомарно и возникает
+ * IOException, состояние файлов не определено. У {@link #writeAll(Writer, CustomList)}
+ * этой гарантии нет (поток принадлежит вызывающему), и заголовок {@code #} пишется
+ * на <b>каждый</b> вызов — поэтому метод не композируется для дописывания; reader
+ * всё равно разбирает такой вывод корректно (пропускает строки {@code #}).
  *
  * <p>
- * Note: a hand-edited file line with an <b>empty</b> model ({@code ;340;2022})
- * is currently accepted by the reader but rejected by this writer — this
- * asymmetry
- * will be resolved when {@link AutomobileFileReader}'s {@code TODO(validation)}
- * adds the symmetric empty-model check.
+ * Замечание: строка с <b>пустым</b> model ({@code ;340;2022}), вручную
+ * добавленная в файл, сейчас принимается reader'ом, но отвергается writer'ом —
+ * асимметрия исчезнет, когда в {@link AutomobileFileReader} появится
+ * {@code TODO(validation)} с симметричной проверкой пустого model.
  *
  * <p>
- * Requires {@code AutomobileFileReader.DELIMITER} to be package-private.
+ * Требует, чтобы {@code AutomobileFileReader.DELIMITER} был package-private.
  */
+
 public final class AutomobileFileWriter {
 
     private static final String HEADER = "# model;power;year";
 
     private AutomobileFileWriter() {
-        // utility class
+        // утилитный класс
     }
 
     /**
-     * Writes all automobiles to a file (UTF-8). Creates the file, or overwrites
-     * an existing one. Overwriting uses a temp file in the target's directory
-     * followed by an atomic move where the filesystem supports it; if atomic
-     * replacement is not supported, a best-effort non-atomic replace is used
-     * instead (see the class-level note on non-atomic moves).
+     * Пишет все автомобили в файл (UTF-8). Создаёт файл или перезаписывает
+     * существующий. Перезапись идёт через временный файл в каталоге цели и
+     * атомарное перемещение, если ФС это поддерживает; иначе — best-effort
+     * неатомарная замена (см. замечание о неатомарных перемещениях).
      * <p>
-     * <b>POSIX caveat:</b> overwriting replaces the file with the temp file, so
-     * on POSIX filesystems the target's permissions become the temp file's
-     * (typically {@code 0600}). Callers who need to preserve group/other access
-     * must reapply permissions after the write. On non-POSIX filesystems (e.g.
-     * Windows) this caveat does not apply — ACLs are inherited from the parent
-     * directory.
+     * <b>Оговорка POSIX:</b> перезапись заменяет файл временным, поэтому на POSIX
+     * права цели становятся правами временного файла (обычно {@code 0600}).
+     * Если нужны group/other-права, вызывающий должен восстановить их после записи.
+     * На не-POSIX ФС (например Windows) это неактуально — ACL наследуются от
+     * родительского каталога.
      */
     public static void writeAll(Path path, CustomList<Automobile> autos) throws IOException {
         Objects.requireNonNull(path, "path");
         Objects.requireNonNull(autos, "autos");
-        validateAll(autos); // BEFORE any file I/O
+        validateAll(autos); // ДО любого файлового I/O
 
         Path target = path.toAbsolutePath();
         Path dir = target.getParent();
@@ -101,7 +93,7 @@ public final class AutomobileFileWriter {
                         StandardCopyOption.REPLACE_EXISTING,
                         StandardCopyOption.ATOMIC_MOVE);
             } catch (AtomicMoveNotSupportedException | FileAlreadyExistsException e) {
-                // Filesystem can't do atomic replace — fall back to best-effort.
+                // ФС не умеет атомарную замену — best-effort fallback
                 Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
             }
         } finally {
@@ -110,13 +102,13 @@ public final class AutomobileFileWriter {
     }
 
     /**
-     * Writes to a caller-provided writer.
+     * Пишет в переданный writer.
      * <p>
-     * <b>The caller owns {@code writer}: this method neither flushes nor closes
-     * it.</b>
-     * Emits the {@code #} header on every call (not self-composable for append; the
-     * reader handles the duplicate header fine).
+     * <b>Writer принадлежит вызывающему: метод его НЕ flush'ит и НЕ закрывает.</b>
+     * Заголовок {@code #} пишется на каждый вызов (не композируется для дописывания;
+     * reader дубликат заголовка переживает).
      */
+
     public static void writeAll(Writer writer, CustomList<Automobile> autos) throws IOException {
         Objects.requireNonNull(writer, "writer");
         Objects.requireNonNull(autos, "autos");
@@ -127,20 +119,20 @@ public final class AutomobileFileWriter {
     }
 
     /**
-     * Writes a single automobile to a file (UTF-8), equivalent to
-     * {@code writeAll(path, [auto])}. Creates or overwrites the file atomically.
+     * Пишет один автомобиль в файл (UTF-8), эквивалент
+     * {@code writeAll(path, [auto])}. Создаёт или атомарно перезаписывает файл.
      */
+
     public static void write(Path path, Automobile auto) throws IOException {
         Objects.requireNonNull(auto, "auto");
         writeAll(path, singleton(auto));
     }
 
     /**
-     * Writes a single automobile to a caller-provided writer, equivalent to
+     * Пишет один автомобиль в переданный writer, эквивалент
      * {@code writeAll(writer, [auto])}.
      * <p>
-     * <b>The caller owns {@code writer}: this method neither flushes nor closes
-     * it.</b>
+     * <b>Writer принадлежит вызывающему: метод его НЕ flush'ит и НЕ закрывает.</b>
      */
     public static void write(Writer writer, Automobile auto) throws IOException {
         Objects.requireNonNull(auto, "auto");
@@ -148,8 +140,7 @@ public final class AutomobileFileWriter {
     }
 
     /**
-     * Writes records to a caller-provided writer. Caller decides whether to emit
-     * the header.
+     * Пишет записи в переданный writer. Решение о заголовке — за вызывающим.
      */
     private static void writeRecords(Writer writer, CustomList<Automobile> autos) throws IOException {
         for (Automobile a : autos) {
@@ -159,14 +150,14 @@ public final class AutomobileFileWriter {
     }
 
     /**
-     * Appends automobiles to a file (UTF-8). Creates the file (with header) if
-     * missing or empty; otherwise appends records only, without a duplicate header.
+     * Дописывает автомобили в файл (UTF-8). Создаёт файл (с заголовком), если он
+     * отсутствует или пуст; иначе дописывает только записи, без дубликата заголовка.
      * <p>
-     * <b>Not atomic:</b> if the write fails mid-way, the file may end with a
-     * partial record. The reader will report that line on its next read.
+     * <b>Не атомарно:</b> если запись сорвётся посередине, файл может закончиться
+     * неполной строкой. Reader сообщит об этой строке при следующем чтении.
      * <p>
-     * <b>Caller owns the file's existing permissions/contents</b>; this method does
-     * not truncate.
+     * <b>Права и содержимое существующего файла — на вызывающем</b>; метод не
+     * усекает файл.
      */
     public static void appendAll(Path path, CustomList<Automobile> autos) throws IOException {
         Objects.requireNonNull(path, "path");
@@ -185,7 +176,7 @@ public final class AutomobileFileWriter {
     }
 
     /**
-     * Appends a single automobile — equivalent to {@code appendAll(path, [auto])}.
+     * Дописывает один автомобиль — эквивалент {@code appendAll(path, [auto])}.
      */
     public static void append(Path path, Automobile auto) throws IOException {
         Objects.requireNonNull(auto, "auto");
@@ -210,7 +201,7 @@ public final class AutomobileFileWriter {
     private static void validateModel(String model) {
         if (model == null
                 || model.isEmpty()
-                || !model.equals(model.trim()) // keep trim(), NOT strip(): must match reader
+                || !model.equals(model.trim()) // trim(), НЕ strip(): должен совпадать с reader
                 || model.startsWith("#")
                 || model.indexOf(';') >= 0
                 || model.indexOf('\n') >= 0

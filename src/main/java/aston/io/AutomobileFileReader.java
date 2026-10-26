@@ -7,47 +7,59 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.regex.Pattern;
+import java.util.Objects;
 
 /**
- * Reads automobiles from a text file (UTF-8).
+ * Читает и парсит автомобили в UTF-8 формате, совместимом с
+ * {@link AutomobileFileWriter}.
  *
- * <p>Format: one record per line, fields separated by {@code ;}.
- * Lines starting with {@code #} and blank lines are ignored.
- * No header row is required — column meaning is documented by a leading {@code #} line:
+ * <p>
+ * Формат: одна запись на строку, поля через {@code ;}.
+ * Строки с {@code #} в начале и пустые строки игнорируются.
+ * Заголовок не обязателен — назначение колонок задаёт строка {@code #}:
+ *
  * <pre>
  * # model;power;year
  * BMW X5;340;2022
  * Toyota Camry;250;2020
  * </pre>
  *
- * <p>Value validation (field count, non-empty model, power &gt; 0, plausible year)
- * is <b>intentionally not implemented yet</b> — see {@code TODO(validation)} below.
+ * <p>
+ * Валидация значений (число полей, непустая модель, power &gt; 0,
+ * правдоподобный год) <b>пока не реализована</b> — см.
+ * {@code TODO(validation)}.
  */
 public final class AutomobileFileReader {
 
-    private static final String DELIMITER = ";";
-    private static final Pattern SPLIT_PATTERN = Pattern.compile(Pattern.quote(DELIMITER));
+    static final String DELIMITER = ";";
 
     private AutomobileFileReader() {
-        // utility class
+        // утилитный класс
     }
 
-    /** Reads all automobiles from a file (UTF-8). This method opens and closes the file. */
+    /**
+     * Читает все автомобили из файла (UTF-8). Открывает и закрывает файл.
+     */
     public static CustomList<Automobile> readAll(Path path) throws IOException {
+        Objects.requireNonNull(path, "path");
+
         try (BufferedReader br = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-            return readAll(br); // br owned here → closed by try-with-resources
+            return readAll(br); // br закрывается через try-with-resources
         }
     }
 
     /**
-     * Reads from a caller-provided reader.
-     * <p><b>The caller owns {@code reader}: this method does NOT close it.</b>
+     * Читает из переданного reader'а.
+     * <p>
+     * <b>Reader принадлежит вызывающему: метод его НЕ закрывает.</b>
      */
     public static CustomList<Automobile> readAll(Reader reader) throws IOException {
+        Objects.requireNonNull(reader, "reader");
+
         BufferedReader br = (reader instanceof BufferedReader)
                 ? (BufferedReader) reader
                 : new BufferedReader(reader);
@@ -59,14 +71,13 @@ public final class AutomobileFileReader {
         while ((line = br.readLine()) != null) {
             lineNo++;
 
-            // Strip BOM (U+FEFF)
             if (lineNo == 1 && line.startsWith("\uFEFF")) {
                 line = line.substring(1);
             }
             line = line.trim();
 
             if (line.isEmpty() || line.startsWith("#")) {
-                continue; // comment or blank line
+                continue;
             }
 
             result.add(parseLine(line, lineNo));
@@ -74,16 +85,29 @@ public final class AutomobileFileReader {
         return result;
     }
 
-    /** Convenience overload for tests: reads from a string. */
-    public static CustomList<Automobile> readAll(String csvContent) throws IOException {
-        return readAll(new StringReader(csvContent));
+    /**
+     * Парсит автомобили из CSV-содержимого. Файловый ввод-вывод не выполняет,
+     * ничего не закрывает; на вход идёт уже прочитанное содержимое файла.
+     *
+     * @param csvContent CSV-текст, <b>не</b> путь к файлу
+     * @throws IllegalArgumentException если запись не удаётся разобрать
+     * @throws NullPointerException     если {@code csvContent} равен {@code null}
+     */
+    public static CustomList<Automobile> parse(String csvContent) {
+        Objects.requireNonNull(csvContent, "csvContent");
+        try {
+            return readAll(new StringReader(csvContent));
+        } catch (IOException e) {
+            // StringReader не бросает IOException; защитная обёртка.
+            throw new UncheckedIOException("unexpected I/O error parsing string", e);
+        }
     }
 
     private static Automobile parseLine(String line, int lineNo) {
-        String[] parts = line.split(SPLIT_PATTERN.pattern(), -1); // -1 keeps trailing empty fields
+        String[] parts = line.split(DELIMITER, -1); // -1 сохраняет пустые поля в конце
 
-        // TODO(validation): ensure parts.length == FIELD_COUNT (3) 
-        // and report lineNo + original line
+        // TODO(validation): проверить parts.length == FIELD_COUNT (3)
+        // и сообщить lineNo + исходную строку
 
         String model = parts[0].trim();
 
@@ -91,16 +115,16 @@ public final class AutomobileFileReader {
         int year;
         try {
             power = Integer.parseInt(parts[1].trim());
-            year  = Integer.parseInt(parts[2].trim());
+            year = Integer.parseInt(parts[2].trim());
         } catch (NumberFormatException e) {
-            // Not validation — just line context for the raw parse error.
+            // не валидация — просто контекст строки для ошибки парсинга
             throw new IllegalArgumentException(
                     "Line " + lineNo + ": bad number in \"" + line + "\"", e);
         }
 
-        // TODO(validation): model must not be blank
-        // TODO(validation): power must be > 0
-        // TODO(validation): year must be in plausible range (e.g. 1900..currentYear+1)
+        // TODO(validation): model не должен быть пустым
+        // TODO(validation): power должен быть > 0
+        // TODO(validation): year должен быть в правдоподобном диапазоне (например 1900..currentYear+1)
 
         return new Automobile.Builder()
                 .model(model)

@@ -17,9 +17,10 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Tests for {@link AutomobileFileReader}.
  *
- * <p>Tests for {@code TODO(validation)} in {@code parseLine} (field count,
+ * <p>
+ * Tests for {@code TODO(validation)} in {@code parseLine} (field count,
  * non-blank model, power &gt; 0, plausible year) are intentionally omitted
- * until that work lands
+ * until that work lands.
  */
 class AutomobileFileReaderTest {
 
@@ -27,64 +28,30 @@ class AutomobileFileReaderTest {
     Path tmp;
 
     // ------------------------------------------------------------------
-    // Parsing — happy path
+    // Parsing — happy path, CRLF, whitespace
     // ------------------------------------------------------------------
 
     @Test
-    void readsSingleRecord() throws IOException {
-        CustomList<Automobile> result =
-                AutomobileFileReader.readAll("BMW X5;340;2022");
-
-        assertEquals(1, result.size());
-        Automobile a = result.get(0);
-        assertEquals("BMW X5", a.getModel());
-        assertEquals(340,      a.getPower());
-        assertEquals(2022,     a.getYear());
-    }
-
-    @Test
-    void readsMultipleRecords() throws IOException {
-        String content = String.join("\n",
-                "BMW X5;340;2022",
+    void parsesMultipleRecordsWithCrLfAndWhitespace() {
+        String content = String.join("\r\n",
+                "   BMW X5  ;  340 ; 2022 ",
                 "Toyota Camry;250;2020",
                 "Lada 2107;75;1985");
 
-        CustomList<Automobile> result = AutomobileFileReader.readAll(content);
+        CustomList<Automobile> result = AutomobileFileReader.parse(content);
 
         assertEquals(3, result.size());
-        assertEquals("BMW X5",       result.get(0).getModel());
-        assertEquals("Toyota Camry", result.get(1).getModel());
-        assertEquals("Lada 2107",    result.get(2).getModel());
-    }
-
-    @Test
-    void handlesCrLfLineEndings() throws IOException {
-        CustomList<Automobile> result =
-                AutomobileFileReader.readAll("BMW X5;340;2022\r\nAudi A6;250;2021\r\n");
-
-        assertEquals(2, result.size());
-        assertEquals("BMW X5",  result.get(0).getModel());
-        assertEquals("Audi A6", result.get(1).getModel());
-    }
-
-    @Test
-    void trimsWhitespaceAroundFields() throws IOException {
-        CustomList<Automobile> result =
-                AutomobileFileReader.readAll("   BMW X5  ;  340 ; 2022 ");
-
-        assertEquals(1, result.size());
-        Automobile a = result.get(0);
-        assertEquals("BMW X5", a.getModel());
-        assertEquals(340,      a.getPower());
-        assertEquals(2022,     a.getYear());
+        assertAuto(result.get(0), "BMW X5", 340, 2022);
+        assertAuto(result.get(1), "Toyota Camry", 250, 2020);
+        assertAuto(result.get(2), "Lada 2107", 75, 1985);
     }
 
     // ------------------------------------------------------------------
-    // Comments, blank lines, BOM
+    // Skipping — comments, blanks, empty
     // ------------------------------------------------------------------
 
     @Test
-    void skipsCommentsAndBlankLines() throws IOException {
+    void skipsCommentsAndBlankLines() {
         String content = String.join("\n",
                 "# this is a comment",
                 "",
@@ -93,54 +60,42 @@ class AutomobileFileReaderTest {
                 "# trailing comment",
                 "Audi A6;250;2021");
 
-        CustomList<Automobile> result = AutomobileFileReader.readAll(content);
+        CustomList<Automobile> result = AutomobileFileReader.parse(content);
 
         assertEquals(2, result.size());
-        assertEquals("BMW X5",  result.get(0).getModel());
+        assertEquals("BMW X5", result.get(0).getModel());
         assertEquals("Audi A6", result.get(1).getModel());
     }
 
     @Test
-    void returnsEmptyListForEmptyInput() throws IOException {
-        assertEquals(0, AutomobileFileReader.readAll("").size());
-    }
-
-    @Test
-    void returnsEmptyListForOnlyCommentsAndBlanks() throws IOException {
-        assertEquals(0, AutomobileFileReader.readAll(
-                "# nothing but a header\n\n   \n# and another comment\n").size());
-    }
-
-    @Test
-    void stripsLeadingBomOnFirstLine() throws IOException {
-        CustomList<Automobile> result =
-                AutomobileFileReader.readAll("\uFEFFBMW X5;340;2022");
-
-        assertEquals(1, result.size());
-        assertEquals("BMW X5", result.get(0).getModel());
-    }
-
-    @Test
-    void stripsBomWhenFirstLineIsComment() throws IOException {
-        // Ordering check: BOM must be stripped *before* the '#' check.
-        // If someone reorders them, the first line becomes "\uFEFF# model..."
-        // which is no longer recognized as a comment and blows up in parseLine.
-        String content = "\uFEFF# model;power;year\nBMW X5;340;2022";
-
-        CustomList<Automobile> result = AutomobileFileReader.readAll(content);
-
-        assertEquals(1, result.size());
-        assertEquals("BMW X5", result.get(0).getModel());
+    void returnsEmptyListWhenNothingToParse() {
+        assertEquals(0, AutomobileFileReader.parse("").size());
+        assertEquals(0, AutomobileFileReader.parse("# header only\n\n   \n").size());
     }
 
     // ------------------------------------------------------------------
-    // Encoding — must fail on any non-UTF-8 decode
+    // BOM
     // ------------------------------------------------------------------
 
     @Test
-    void readsNonAsciiFromUtf8File() throws IOException {
-        // Pure-ASCII fixtures pass under cp1252, ISO-8859-1 and UTF-8 alike,
-        // so they can't verify the UTF-8 contract. Non-ASCII content can.
+    void stripsBomBeforeCommentCheck() {
+        CustomList<Automobile> plain = AutomobileFileReader.parse("\uFEFFBMW X5;340;2022");
+        CustomList<Automobile> comment = AutomobileFileReader.parse("\uFEFF# header\nBMW X5;340;2022");
+
+        assertEquals(1, plain.size());
+        assertEquals(1, comment.size());
+        assertEquals("BMW X5", plain.get(0).getModel());
+        assertEquals("BMW X5", comment.get(0).getModel());
+    }
+
+    // ------------------------------------------------------------------
+    // Encoding — UTF-8 on file read
+    // ------------------------------------------------------------------
+
+    @Test
+    void readsUtf8File() throws IOException {
+        // Pure-ASCII fixtures pass under any single-byte charset;
+        // only non-ASCII content verifies the UTF-8 contract.
         Path file = tmp.resolve("cars.txt");
         Files.writeString(file, "Citroën C5;150;2020", StandardCharsets.UTF_8);
 
@@ -150,70 +105,57 @@ class AutomobileFileReaderTest {
         assertEquals("Citroën C5", result.get(0).getModel());
     }
 
-    @Test
-    void readsNonAsciiFromUtf8String() throws IOException {
-        CustomList<Automobile> result =
-                AutomobileFileReader.readAll("Škoda Octavia;150;2021");
-
-        assertEquals(1, result.size());
-        assertEquals("Škoda Octavia", result.get(0).getModel());
-    }
-
     // ------------------------------------------------------------------
-    // Error reporting
+    // Error reporting & contracts
     // ------------------------------------------------------------------
 
     @Test
     void wrapsBadNumberWithLineNumberAndOriginalLine() {
-        String content = "# header\nBMW X5;abc;2022";
-
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> AutomobileFileReader.readAll(content));
+                () -> AutomobileFileReader.parse("# header\nBMW X5;abc;2022"));
 
-        assertTrue(ex.getMessage().contains("Line 2"),
-                () -> "message should mention line number, was: " + ex.getMessage());
-        assertTrue(ex.getMessage().contains("BMW X5;abc;2022"),
-                () -> "message should include original line, was: " + ex.getMessage());
-        assertTrue(ex.getCause() instanceof NumberFormatException,
-                () -> "cause should be NumberFormatException, was: " + ex.getCause());
+        assertTrue(ex.getMessage().contains("Line 2"), ex::getMessage);
+        assertTrue(ex.getMessage().contains("BMW X5;abc;2022"), ex::getMessage);
+        assertTrue(ex.getCause() instanceof NumberFormatException, ex::getMessage);
     }
 
     @Test
     void throwsIOExceptionOnMissingFile() {
         assertThrows(IOException.class,
-                () -> AutomobileFileReader.readAll(tmp.resolve("does-not-exist.txt")));
+                () -> AutomobileFileReader.readAll(tmp.resolve("missing.txt")));
+    }
+
+    @Test
+    void parseRejectsNull() {
+        assertThrows(NullPointerException.class,
+                () -> AutomobileFileReader.parse(null));
     }
 
     // ------------------------------------------------------------------
-    // Resource ownership — caller owns the Reader, reader must not close it
+    // Resource ownership — caller owns the Reader
     // ------------------------------------------------------------------
 
     @Test
     void doesNotCloseCallerProvidedReader() throws IOException {
-        TrackingReader reader = new TrackingReader("BMW X5;340;2022");
+        TrackingReader plain = new TrackingReader("BMW X5;340;2022");
+        TrackingBufferedReader buffered = new TrackingBufferedReader("BMW X5;340;2022");
 
-        AutomobileFileReader.readAll(reader);
+        AutomobileFileReader.readAll(plain);
+        AutomobileFileReader.readAll(buffered);
 
-        assertFalse(reader.closed,
-                "readAll(Reader) must not close a caller-owned Reader");
-    }
-
-    @Test
-    void doesNotCloseCallerProvidedBufferedReader() throws IOException {
-        // Exercises the "instanceof BufferedReader" fast path — a distinct
-        // code branch from the plain-Reader path above.
-        TrackingBufferedReader reader =
-                new TrackingBufferedReader("BMW X5;340;2022");
-
-        AutomobileFileReader.readAll(reader);
-
-        assertFalse(reader.closed,
-                "readAll(Reader) must not close a caller-owned BufferedReader");
+        assertFalse(plain.closed, "plain Reader must not be closed");
+        assertFalse(buffered.closed, "BufferedReader must not be closed (fast path)");
     }
 
     // ------------------------------------------------------------------
-    // Tracking helpers
+    // Helpers
     // ------------------------------------------------------------------
+
+    private static void assertAuto(Automobile a, String model, int power, int year) {
+        assertEquals(model, a.getModel());
+        assertEquals(power, a.getPower());
+        assertEquals(year, a.getYear());
+    }
 
     private static final class TrackingReader extends StringReader {
         boolean closed;

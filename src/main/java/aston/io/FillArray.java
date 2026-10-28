@@ -9,7 +9,7 @@ import java.util.Scanner;
 
 public class FillArray {
 
-    private static final Path filePath = Paths.get("C:\\Users\\ostry\\IdeaProjects\\ASTON_Sorting_Project\\src\\main\\resources\\automobiles-input.csv");
+    private static final Path filePath = Paths.get("src/main/resources/automobiles-input.csv");
 
     public static CustomList fiilFromFile(CustomList customList) throws IOException {
         CustomList<Automobile> automobiles = AutomobileFileReader.readAll(filePath);

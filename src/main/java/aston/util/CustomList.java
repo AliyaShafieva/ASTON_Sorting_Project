@@ -3,6 +3,8 @@ package aston.util;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Spliterator;
+import java.util.Spliterators;
 
 public class CustomList<T> implements Iterable<T> { // T — тип данных, который мы будем хранить
     private static final int DEFAULT_CAPACITY = 10; // Константа, базовый размер массива при создании списка
@@ -108,5 +110,22 @@ public class CustomList<T> implements Iterable<T> { // T — тип данных
                 return (T) elements[cursor++];
             }
         };
+    }
+
+
+    @Override
+    public Spliterator<T> spliterator() {   /* Создает сплитератор для обхода элементов списка.
+                                             * Реализация Spliterator позволяет использовать Stream API над коллекцией,
+                                             * обеспечивая эффективную последовательную и параллельную обработку данных.
+                                             */
+        return Spliterators.spliterator(
+                elements,        // Исходный массив данных
+                0,               // Начальная позиция
+                size,            // Конечная позиция (количество реально занятых элементов)
+                Spliterator.ORDERED |    // Гарантирует сохранение порядка элементов
+                        Spliterator.SIZED |     // Сообщает размер коллекции, оптимизируя выделение памяти
+                        Spliterator.SUBSIZED |  // Позволяет эффективно делить список для параллельной обработки
+                        Spliterator.IMMUTABLE   // Указывает на то, что структура не меняется в рамках текущей итерации
+        );
     }
 }

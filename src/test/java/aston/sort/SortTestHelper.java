@@ -38,9 +38,17 @@ public class SortTestHelper {
         System.out.println("        ожидали:  [" + expected + "]");
         System.out.println("        получили: [" + actual + "]" + (ok ? "" : "   <-- не совпадает"));
     }
+    /// Сколько проверок прошло.
+    static int passedCount() {
+        return passed;
+    }
+    /// Сколько проверок упало.
+    static int failedCount() {
+        return failed;
+    }
     /// Печатает итог: сколько проверок прошло и сколько упало.
     static void printTotal() {
-        System.out.println("Итого: " + GREEN + "прошло " + passed + RESET + ", " + RED + "упало " + failed);
+        System.out.println("Итого: " + GREEN + "прошло " + passed + RESET + ", " + RED + "упало " + failed + RESET);
     }
 
     static Automobile car(String model, int power, int year) {

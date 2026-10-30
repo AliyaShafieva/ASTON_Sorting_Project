@@ -82,25 +82,43 @@ public final class AutomobileFileReader {
     private static Automobile parseLine(String line, int lineNo) {
         String[] parts = line.split(SPLIT_PATTERN.pattern(), -1); // -1 keeps trailing empty fields
 
-        // TODO(validation): ensure parts.length == FIELD_COUNT (3) 
-        // and report lineNo + original line
+        if (parts.length != 3) {
+            System.err.printf("Ошибка валидации (строка %d): Ожидалось 3 поля, получено %d. Строка пропущенна. Текст: \"%s\"%n",
+                    lineNo, parts.length, line);
+            return null;
+        }
 
         String model = parts[0].trim();
 
+        if (model.isEmpty()) {
+            System.err.printf("Ошибка валидации (строка %d): Поле 'model' не может быть пустым. Строка пропущенна.%n", lineNo);
+            return null;
+        }
+
         int power;
         int year;
+
         try {
             power = Integer.parseInt(parts[1].trim());
             year  = Integer.parseInt(parts[2].trim());
         } catch (NumberFormatException e) {
-            // Not validation — just line context for the raw parse error.
-            throw new IllegalArgumentException(
-                    "Line " + lineNo + ": bad number in \"" + line + "\"", e);
+            System.err.printf("Ошибка валидации (строка %d): Неверный формат числа в полях мощности или года. Текст: \"%s\"%n",
+                    lineNo, line);
+            return null;
         }
 
-        // TODO(validation): model must not be blank
-        // TODO(validation): power must be > 0
-        // TODO(validation): year must be in plausible range (e.g. 1900..currentYear+1)
+        if (power <= 0) {
+            System.err.printf("Ошибка валидации (строка %d): Мощность должна быть больше 0. Получено: %d. Строка пропущенна.%n",
+                    lineNo, power);
+            return null;
+        }
+
+        int currentYear = java.time.Year.now().getValue();
+        if (year < 1886 || year > (currentYear + 1)) {
+            System.err.printf("Ошибка валидации (строка %d): Неправдоподобный год выпуска: %d. Строка пропущенна.%n",
+                    lineNo, year);
+            return null;
+        }
 
         return new Automobile.Builder()
                 .model(model)

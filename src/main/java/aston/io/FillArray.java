@@ -15,11 +15,16 @@ public class FillArray {
         CustomList<Automobile> automobiles = AutomobileFileReader.readAll(filePath);
 
         for (int i = 0; i < automobiles.size(); i++) {
-            customList.add(automobiles.get(i));
+            Automobile auto = automobiles.get(i);
+
+            if (auto != null) {
+                customList.add(auto);
+            }
         }
 
         return customList;
     }
+
 
     /// созданный метод для заполнение списка вручную
     public static CustomList fillHandle(CustomList customList, int lenghtArray) {
@@ -28,7 +33,6 @@ public class FillArray {
 
     /// созданный метод для заполнение списка рандомными значениями
     public static CustomList fillRandom(CustomList customList, int lenghtArray) {
-
         return customList;
     }
 }

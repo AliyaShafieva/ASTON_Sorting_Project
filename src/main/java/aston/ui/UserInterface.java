@@ -16,8 +16,6 @@ public class UserInterface {
 
     private static final Scanner scanner = new Scanner(System.in);
     private static boolean isFinish = true;
-    private static String typeFill;
-    private static int chooseUser, typeSort;
     private static int targetCapacity = 10;
 
     public static void menu() {
@@ -25,6 +23,7 @@ public class UserInterface {
         while (isFinish) {
             CustomList<Automobile> customList = new CustomList<>();
 
+            int chooseUser;
             while (true) {
                 System.out.print("Выберите длину списка (0 - базовая на 10 элементов, 1 - 50, 2 - 100, 3 - 500, 4 - 1000): ");
                 chooseUser = readDataFromUser();
@@ -35,6 +34,7 @@ public class UserInterface {
                 }
             }
 
+            String typeFill;
             while (true) {
                 System.out.print("Выберите вариант заполнения списка данными (1 - из файла, 2 - рандомно, 3 - вручную): ");
                 chooseUser = readDataFromUser();
@@ -76,7 +76,7 @@ public class UserInterface {
             
             while (true) {
                 System.out.print("Выберите вариант сортировки данных списка (1 - пузырьком, 2 - вставками, 3 - по чётным значениям полей): ");
-                typeSort = readDataFromUser();
+                int typeSort = readDataFromUser();
 
                 if (typeSort >= 1 && typeSort <= 3) {
                     sortList(customList, typeSort);
@@ -109,7 +109,7 @@ public class UserInterface {
                 }
             }
 
-            if (customList.size() > 0) {
+            if (!customList.isEmpty()) {
                 System.out.print("\nПосчитать, сколько раз элемент встречается в списке (многопоточно)? (1 - да, 2 - нет): ");
                 chooseUser = readDataFromUser();
 
@@ -152,7 +152,7 @@ public class UserInterface {
     }
 
     private static void sortList(CustomList<Automobile> list, int typeSort) {
-        if (list == null || list.size() == 0) {
+        if (list == null || list.isEmpty()) {
             System.out.println("[ПРЕДУПРЕЖДЕНИЕ]: Список пуст. Нечего сортировать.");
             return;
         }
@@ -229,27 +229,32 @@ public class UserInterface {
 
     private static boolean setLengthList(int chooseUser) {
 
-        switch (chooseUser) {
-            case 0:
+        return switch (chooseUser) {
+            case 0 -> {
                 targetCapacity = 10;
-                return true;
-            case 1:
+                yield true;
+            }
+            case 1 -> {
                 targetCapacity = 50;
-                return true;
-            case 2:
+                yield true;
+            }
+            case 2 -> {
                 targetCapacity = 100;
-                return true;
-            case 3:
+                yield true;
+            }
+            case 3 -> {
                 targetCapacity = 500;
-                return true;
-            case 4:
+                yield true;
+            }
+            case 4 -> {
                 targetCapacity = 1000;
-                return true;
-
-            default:
+                yield true;
+            }
+            default -> {
                 System.out.println("[ОШИБКА]: Несуществующий пункт длины! Доступны только варианты от 0 до 4. Повторите попытку...");
-                return false;
-        }
+                yield false;
+            }
+        };
     }
 
     private static CustomList<Automobile> fillArray(String typeFill, CustomList<Automobile> customList) throws IOException {

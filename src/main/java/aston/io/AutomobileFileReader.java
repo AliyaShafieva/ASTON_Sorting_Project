@@ -104,27 +104,43 @@ public final class AutomobileFileReader {
     }
 
     private static Automobile parseLine(String line, int lineNo) {
-        String[] parts = line.split(DELIMITER, -1); // -1 сохраняет пустые поля в конце
 
-        // TODO(validation): проверить parts.length == FIELD_COUNT (3)
-        // и сообщить lineNo + исходную строку
+        if (line == null || line.isBlank()) {
+            throw new IllegalArgumentException("Line " + lineNo + ": line is empty or null");
+        }
+
+        String[] parts = line.split(DELIMITER, -1);
+
+        if (parts.length < 3) {
+            throw new IllegalArgumentException("Line " + lineNo + ": insufficient data fields in \"" + line + "\"");
+        }
 
         String model = parts[0].trim();
 
-        int power;
-        int year;
+        if (model.isEmpty()) {
+            throw new IllegalArgumentException("Line " + lineNo + ": car model cannot be blank");
+        }
+
+        int power, year;
+
         try {
             power = Integer.parseInt(parts[1].trim());
-            year = Integer.parseInt(parts[2].trim());
+            year  = Integer.parseInt(parts[2].trim());
         } catch (NumberFormatException e) {
-            // не валидация — просто контекст строки для ошибки парсинга
             throw new IllegalArgumentException(
                     "Line " + lineNo + ": bad number in \"" + line + "\"", e);
         }
 
-        // TODO(validation): model не должен быть пустым
-        // TODO(validation): power должен быть > 0
-        // TODO(validation): year должен быть в правдоподобном диапазоне (например 1900..currentYear+1)
+        if (power <= 0) {
+            throw new IllegalArgumentException("Line " + lineNo + ": engine power must be greater than 0, got: " + power);
+        }
+
+        int currentYear = java.time.Year.now().getValue();
+
+        if (year < 1900 || year > currentYear + 1) {
+            throw new IllegalArgumentException(
+                    "Line " + lineNo + ": year must be between 1900 and " + (currentYear + 1) + ", got: " + year);
+        }
 
         return new Automobile.Builder()
                 .model(model)

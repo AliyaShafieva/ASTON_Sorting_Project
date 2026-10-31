@@ -1,48 +1,52 @@
 package aston.ui;
 
 import aston.core.Automobile;
-import aston.sort.BubbleSort;
-import aston.sort.EvenValuesSorter;
-import aston.sort.InsertionSort;
-import aston.sort.SortStrategy;
-import aston.util.CustomList;
+import aston.core.AutomobileComparators;
+import aston.io.AutomobileFileWriter;
+import aston.io.FillArray;
+import aston.sort.*;
+import aston.stream.ParallelOccurrenceCounter;
 import aston.stream.StreamDataFiller;
+import aston.util.CustomList;
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.Scanner;
-import java.util.function.ToIntFunction;
-
-import static aston.io.FillArray.fiilFromFile;
 
 public class UserInterface {
 
     private static final Scanner scanner = new Scanner(System.in);
     private static boolean isFinish = true;
-    private static String typeFiil;
+    private static String typeFill;
     private static int chooseUser, typeSort;
     private static int targetCapacity = 10;
 
-    public static void menu() throws IOException, InterruptedException {
+    public static void menu() {
 
         while (isFinish) {
             CustomList<Automobile> customList = new CustomList<>();
 
-            System.out.print("Выберите длину списка (0 - базовая на 10 элементов, 1 - 50, 2 - 100, 3 - 500, 4 - 1000): ");
-            chooseUser = readDataFromUser();
-            setLengthList(customList, chooseUser);
+            while (true) {
+                System.out.print("Выберите длину списка (0 - базовая на 10 элементов, 1 - 50, 2 - 100, 3 - 500, 4 - 1000): ");
+                chooseUser = readDataFromUser();
+
+                if (setLengthList(chooseUser)) {
+                    System.out.println("Новая целевая длина установлена: " + targetCapacity + "\n");
+                    break;
+                }
+            }
 
             while (true) {
                 System.out.print("Выберите вариант заполнения списка данными (1 - из файла, 2 - рандомно, 3 - вручную): ");
                 chooseUser = readDataFromUser();
 
                 if (chooseUser == 1) {
-                    typeFiil = "from file";
+                    typeFill = "from file";
                     break;
                 } else if (chooseUser == 2) {
-                    typeFiil = "random values";
+                    typeFill = "random values";
                     break;
                 } else if (chooseUser == 3){
-                    typeFiil = "handle input";
+                    typeFill = "handle input";
                     break;
                 } else {
                     System.out.println("Такого варианта заполнения не существует. Повторите попытку....");
@@ -50,9 +54,13 @@ public class UserInterface {
             }
 
             try {
-                customList = fillArray(typeFiil, customList);
+                customList = fillArray(typeFill, customList);
             } catch (IllegalArgumentException e) {
                 System.out.println("\n[ОШИБКА ДАННЫХ]: " + e.getMessage());
+                System.out.println("Возврат в главное меню...\n");
+                continue;
+            } catch (IOException e) {
+                System.out.println("\n[ОШИБКА ФАЙЛА]: не удалось прочитать файл: " + e.getMessage());
                 System.out.println("Возврат в главное меню...\n");
                 continue;
             }
@@ -78,8 +86,33 @@ public class UserInterface {
                 }
             }
 
-            System.out.println("\nСписок после сортировки:");
-            outputList(customList);
+            System.out.print("\nХотите сохранить этот отсортированный список в файл? (1 - да, 2 - нет): ");
+            chooseUser = readDataFromUser();
+
+            if (chooseUser == 1) {
+                System.out.print("Введите путь или имя файла для сохранения (например, output.csv): ");
+                String fileName = scanner.nextLine().trim();
+
+                if (fileName.isEmpty()) {
+                    System.out.println("[ОШИБКА]: Имя файла не может быть пустым. Сохранение отменено.");
+                } else {
+                    try {
+                        java.nio.file.Path outputPath = java.nio.file.Paths.get(fileName);
+                        AutomobileFileWriter.writeAll(outputPath, customList);
+                        System.out.println("[УСПЕХ]: Список успешно сохранен в файл: " + fileName);
+                    } catch (IOException e) {
+                        System.out.println("[ОШИБКА ЗАПИСИ]: Не удалось сохранить данные: " + e.getMessage());
+                    }
+                }
+            }
+
+            System.out.print("\nХотите запустить параллельный подсчет вхождений элементов списка? (1 - да, 2 - нет): ");
+            chooseUser = readDataFromUser();
+            if (chooseUser == 1) {
+                System.out.println("Запуск ParallelOccurrenceCounter...");
+                ParallelOccurrenceCounter.count(customList);
+                System.out.println("Подсчет вхождений успешно завершен!");
+            }
 
             isFinish = exitProgram();
 
@@ -103,39 +136,36 @@ public class UserInterface {
         }
     }
 
-    private static void sortList(CustomList<?> customList, int typeSort) {
-        @SuppressWarnings("unchecked")
-        CustomList<Automobile> list = (CustomList<Automobile>) customList;
+    private static void sortList(CustomList<Automobile> list, int typeSort) {
+        if (list == null || list.size() == 0) {
+            System.out.println("[ПРЕДУПРЕЖДЕНИЕ]: Список пуст. Нечего сортировать.");
+            return;
+        }
 
         if (typeSort == 1 || typeSort == 2) {
             SortStrategy strategy = (typeSort == 1) ? new BubbleSort() : new InsertionSort();
-            int fieldChoise;
+            int fieldChoice;
 
             while (true) {
                 System.out.print("Выберите поле для сортировки (1 - модель, 2 - мощность, 3 - год): ");
-                fieldChoise = readDataFromUser();
-                if (fieldChoise >= 1 && fieldChoise <= 3) {
+                fieldChoice = readDataFromUser();
+
+                if (fieldChoice >= 1 && fieldChoice <= 3) {
                     break;
                 }
+
                 System.out.println("Неверный выбор поля. Повторите попытку!");
             }
 
-            Comparator<Automobile> comparator = null;
+            Comparator<Automobile> comparator = switch (fieldChoice) {
+                case 1 -> AutomobileComparators.BY_MODEL;
+                case 2 -> AutomobileComparators.BY_POWER;
+                default -> AutomobileComparators.BY_YEAR;
+            };
 
-            switch (fieldChoise) {
-                case 1:
-                    comparator = Comparator.comparing(Automobile::getModel);
-                    break;
-                case 2:
-                    comparator = Comparator.comparingInt(Automobile::getPower);
-                    break;
-                case 3:
-                    comparator = Comparator.comparingInt(Automobile::getYear);
-                    break;
-            }
-
-            System.out.println("Запуск: " + strategy.name());
-            strategy.sort(list, comparator);
+            Sorter sorter = new Sorter(strategy);
+            System.out.println("Запуск: " + sorter.getStrategy().name());
+            sorter.sort(list, comparator);
 
         } else if (typeSort == 3) {
             System.out.println("Выбрана сортировка чётных значений числового поля!");
@@ -148,6 +178,7 @@ public class UserInterface {
                 if (strategyChoice == 1) {
                     internalStrategy = new BubbleSort();
                     break;
+
                 } else if (strategyChoice == 2) {
                     internalStrategy = new InsertionSort();
                     break;
@@ -156,7 +187,7 @@ public class UserInterface {
                 System.out.println("Неверный выбор алгоритма. Повторите попытку.");
             }
 
-            ToIntFunction<Automobile> fieldExtractor;
+            java.util.function.ToIntFunction<Automobile> fieldExtractor;
 
             while (true) {
                 System.out.print("Выберите числовое поле (1 - мощность, 2 - год производства): ");
@@ -181,54 +212,107 @@ public class UserInterface {
         System.out.println("Сортировка успешно завершена!");
     }
 
-    private static CustomList<Automobile> setLengthList(CustomList<Automobile> customList, int chooseUser) {
+    private static boolean setLengthList(int chooseUser) {
 
-        if (chooseUser == 0) {
-            targetCapacity = 10;
-        } else if (chooseUser == 1) {
-            targetCapacity = 50;
-        } else if (chooseUser == 2) {
-            targetCapacity = 100;
-        } else if (chooseUser == 3) {
-            targetCapacity = 500;
-        } else if (chooseUser == 4) {
-            targetCapacity = 1000;
+        switch (chooseUser) {
+            case 0:
+                targetCapacity = 10;
+                return true;
+            case 1:
+                targetCapacity = 50;
+                return true;
+            case 2:
+                targetCapacity = 100;
+                return true;
+            case 3:
+                targetCapacity = 500;
+                return true;
+            case 4:
+                targetCapacity = 1000;
+                return true;
+
+            default:
+                System.out.println("[ОШИБКА]: Несуществующий пункт длины! Доступны только варианты от 0 до 4. Повторите попытку...");
+                return false;
         }
-
-        return customList;
     }
 
-    @SuppressWarnings("unchecked")
-    private static CustomList<Automobile> fillArray(String typeFill, CustomList<Automobile> customList) throws IOException, InterruptedException {
+    private static CustomList<Automobile> fillArray(String typeFill, CustomList<Automobile> customList) throws IOException {
+
+        int currentYear = java.time.Year.now().getValue();
+        int nextYear = currentYear + 1;
 
         switch (typeFill) {
             case "from file":
                 System.out.println("Заполнение списка данными из файла...");
-                customList = (CustomList<Automobile>) fiilFromFile(customList);
-                Thread.sleep(1500);
+
+                CustomList<Automobile> allAutomobiles = FillArray.fillFromFile(new CustomList<>());
+
+                int limit = Math.min(allAutomobiles.size(), targetCapacity);
+                for (int i = 0; i < limit; i++) {
+                    Automobile auto = allAutomobiles.get(i);
+
+                    if (auto != null) {
+                        customList.add(auto);
+                    }
+                }
+
+                System.out.println("Из файла прочитано записей: " + allAutomobiles.size());
+                System.out.println("Добавлено: " + limit + " (лимит: " + targetCapacity + ")");
                 System.out.println("Заполнение списка завершено!");
                 break;
 
             case "random values":
                 System.out.println("Заполнение списка рандомными значениями через StreamDataFiller...");
                 customList = StreamDataFiller.fillCustomList(targetCapacity);
-                Thread.sleep(1500);
                 System.out.println("Заполнение списка завершено!");
                 break;
 
             case "handle input":
+
                 System.out.println("Заполнение списка вручную. Требуется ввести элементов: " + targetCapacity);
+
                 for (int i = 0; i < targetCapacity; i++) {
                     System.out.println("\n--- Автомобиль №" + (i + 1) + " ---");
 
-                    System.out.print("Введите модель: ");
-                    String model = scanner.nextLine().trim();
+                    String model;
+                    while (true) {
+                        System.out.print("Введите модель: ");
+                        model = scanner.nextLine().trim();
 
-                    System.out.print("Введите мощность (целое число): ");
-                    int power = readDataFromUser();
+                        if (model.isEmpty()) {
+                            System.out.println("[ОШИБКА]: Модель автомобиля не может быть пустой. Попробуйте снова.");
+                            continue;
+                        }
 
-                    System.out.print("Введите год производства: ");
-                    int year = readDataFromUser();
+                        if (model.startsWith("#") || model.contains(";")) {
+                            System.out.println("[ОШИБКА]: Модель содержит запрещенные символы (# или ;). Попробуйте снова.");
+                            continue;
+                        }
+
+                        break;
+                    }
+
+                    int power;
+                    while (true) {
+                        System.out.print("Введите мощность (целое число): ");
+                        power = readDataFromUser();
+                        if (power > 0) {
+                            break;
+                        }
+                        System.out.println("[ОШИБКА]: Мощность двигателя должна быть больше 0. Попробуйте снова.");
+                    }
+
+                    int year;
+
+                    while (true) {
+                        System.out.print("Введите год производства: ");
+                        year = readDataFromUser();
+                        if (year >= 1900 && year <= nextYear) {
+                            break;
+                        }
+                        System.out.println("[ОШИБКА]: Год должен быть в диапазоне от 1900 до " + nextYear + ". Попробуйте снова.");
+                    }
 
                     Automobile auto = new Automobile.Builder()
                             .model(model)
@@ -238,7 +322,7 @@ public class UserInterface {
 
                     customList.add(auto);
                 }
-                System.out.println("Ручной ввод успешно завершен!");
+                System.out.println("\nРучной ввод успешно завершен!");
                 break;
 
             default:

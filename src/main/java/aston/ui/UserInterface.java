@@ -5,7 +5,7 @@ import aston.core.AutomobileComparators;
 import aston.io.AutomobileFileWriter;
 import aston.io.FillArray;
 import aston.sort.*;
-import aston.stream.ParallelOccurrenceCounter;
+import aston.util.ParallelOccurrenceCounter;
 import aston.stream.StreamDataFiller;
 import aston.util.CustomList;
 import java.io.IOException;
@@ -74,6 +74,9 @@ public class UserInterface {
                 System.out.println("Некорректный ввод. Вывод списка пропущен.");
             }
 
+            System.out.println("\nСписок после сортировки:");
+            outputList(customList);
+            
             while (true) {
                 System.out.print("Выберите вариант сортировки данных списка (1 - пузырьком, 2 - вставками, 3 - по чётным значениям полей): ");
                 typeSort = readDataFromUser();
@@ -106,12 +109,24 @@ public class UserInterface {
                 }
             }
 
-            System.out.print("\nХотите запустить параллельный подсчет вхождений элементов списка? (1 - да, 2 - нет): ");
-            chooseUser = readDataFromUser();
-            if (chooseUser == 1) {
-                System.out.println("Запуск ParallelOccurrenceCounter...");
-                ParallelOccurrenceCounter.count(customList);
-                System.out.println("Подсчет вхождений успешно завершен!");
+            if (customList.size() > 0) {
+                System.out.print("\nПосчитать, сколько раз элемент встречается в списке (многопоточно)? (1 - да, 2 - нет): ");
+                chooseUser = readDataFromUser();
+
+                if (chooseUser == 1) {
+                    int index;
+                    while (true) {
+                        System.out.print("Введите номер элемента (1-" + customList.size() + "): ");
+                        index = readDataFromUser();
+                        if (index >= 1 && index <= customList.size()) {
+                            break;
+                        }
+                        System.out.println("Нет элемента с таким номером. Повторите попытку.");
+                    }
+
+                    Automobile target = customList.get(index - 1);
+                    ParallelOccurrenceCounter.countOccurrences(customList, target, 4);
+                }
             }
 
             isFinish = exitProgram();

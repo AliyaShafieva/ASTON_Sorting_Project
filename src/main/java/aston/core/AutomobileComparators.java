@@ -16,4 +16,7 @@ public final class AutomobileComparators {
 
     public static final Comparator<Automobile> BY_YEAR =
             Comparator.comparingInt(Automobile::getYear);
+
+    public static final Comparator<Automobile> BY_ALL =
+            BY_MODEL.thenComparing(BY_POWER).thenComparing(BY_YEAR);
 }

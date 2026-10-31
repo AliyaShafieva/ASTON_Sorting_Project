@@ -162,10 +162,10 @@ public class UserInterface {
             int fieldChoice;
 
             while (true) {
-                System.out.print("Выберите поле для сортировки (1 - модель, 2 - мощность, 3 - год): ");
+                System.out.print("Выберите поле для сортировки (1 - модель, 2 - мощность, 3 - год, 4 - все поля): ");
                 fieldChoice = readDataFromUser();
 
-                if (fieldChoice >= 1 && fieldChoice <= 3) {
+                if (fieldChoice >= 1 && fieldChoice <= 4) {
                     break;
                 }
 
@@ -175,7 +175,8 @@ public class UserInterface {
             Comparator<Automobile> comparator = switch (fieldChoice) {
                 case 1 -> AutomobileComparators.BY_MODEL;
                 case 2 -> AutomobileComparators.BY_POWER;
-                default -> AutomobileComparators.BY_YEAR;
+                case 3 -> AutomobileComparators.BY_YEAR;
+                default -> AutomobileComparators.BY_ALL;
             };
 
             Sorter sorter = new Sorter(strategy);

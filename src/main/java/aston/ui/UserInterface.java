@@ -73,9 +73,6 @@ public class UserInterface {
             } else if (chooseUser != 2) {
                 System.out.println("Некорректный ввод. Вывод списка пропущен.");
             }
-
-            System.out.println("\nСписок после сортировки:");
-            outputList(customList);
             
             while (true) {
                 System.out.print("Выберите вариант сортировки данных списка (1 - пузырьком, 2 - вставками, 3 - по чётным значениям полей): ");
@@ -88,6 +85,9 @@ public class UserInterface {
                     System.out.println("Такого варианта сортировки не существует. Повторите попытку");
                 }
             }
+
+            System.out.println("\nСписок после сортировки:");
+            outputList(customList);
 
             System.out.print("\nХотите сохранить этот отсортированный список в файл? (1 - да, 2 - нет): ");
             chooseUser = readDataFromUser();

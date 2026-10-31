@@ -101,7 +101,7 @@ public class UserInterface {
                 } else {
                     try {
                         java.nio.file.Path outputPath = java.nio.file.Paths.get(fileName);
-                        AutomobileFileWriter.writeAll(outputPath, customList);
+                        AutomobileFileWriter.appendAll(outputPath, customList);
                         System.out.println("[УСПЕХ]: Список успешно сохранен в файл: " + fileName);
                     } catch (IOException e) {
                         System.out.println("[ОШИБКА ЗАПИСИ]: Не удалось сохранить данные: " + e.getMessage());

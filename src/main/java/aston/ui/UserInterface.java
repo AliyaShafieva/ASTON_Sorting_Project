@@ -65,15 +65,21 @@ public class UserInterface {
                 continue;
             }
 
-            System.out.print("Хотите вывести исходный список? (1 - да, 2 - нет): ");
-            chooseUser = readDataFromUser();
+            while (true) {
+                System.out.print("Хотите вывести исходный список? (1 - да, 2 - нет): ");
+                chooseUser = readDataFromUser();
 
-            if (chooseUser == 1) {
-                outputList(customList);
-            } else if (chooseUser != 2) {
-                System.out.println("Некорректный ввод. Вывод списка пропущен.");
+                if (chooseUser == 1) {
+                    outputList(customList);
+                    break;
+                } else if (chooseUser != 2) {
+                    System.out.println("Некорректный ввод. Вывод списка пропущен.");
+                    break;
+                } else {
+                    System.out.println("Некорректный ввод. Пожалуйста, выберите 1 или 2!");
+                }
             }
-            
+
             while (true) {
                 System.out.print("Выберите вариант сортировки данных списка (1 - пузырьком, 2 - вставками, 3 - по чётным значениям полей): ");
                 int typeSort = readDataFromUser();
@@ -89,43 +95,55 @@ public class UserInterface {
             System.out.println("\nСписок после сортировки:");
             outputList(customList);
 
-            System.out.print("\nХотите сохранить этот отсортированный список в файл? (1 - да, 2 - нет): ");
-            chooseUser = readDataFromUser();
+            while (true) {
+                System.out.print("\nХотите сохранить этот отсортированный список в файл? (1 - да, 2 - нет): ");
+                chooseUser = readDataFromUser();
 
-            if (chooseUser == 1) {
-                System.out.print("Введите путь или имя файла для сохранения (например, output.csv): ");
-                String fileName = scanner.nextLine().trim();
+                if (chooseUser == 1) {
+                    System.out.print("Введите путь или имя файла для сохранения (например, output.csv): ");
+                    String fileName = scanner.nextLine().trim();
 
-                if (fileName.isEmpty()) {
-                    System.out.println("[ОШИБКА]: Имя файла не может быть пустым. Сохранение отменено.");
-                } else {
-                    try {
-                        java.nio.file.Path outputPath = java.nio.file.Paths.get(fileName);
-                        AutomobileFileWriter.writeAll(outputPath, customList);
-                        System.out.println("[УСПЕХ]: Список успешно сохранен в файл: " + fileName);
-                    } catch (IOException e) {
-                        System.out.println("[ОШИБКА ЗАПИСИ]: Не удалось сохранить данные: " + e.getMessage());
+                    if (fileName.isEmpty()) {
+                        System.out.println("[ОШИБКА]: Имя файла не может быть пустым. Сохранение отменено.");
+                    } else {
+                        try {
+                            java.nio.file.Path outputPath = java.nio.file.Paths.get(fileName);
+                            AutomobileFileWriter.writeAll(outputPath, customList);
+                            System.out.println("[УСПЕХ]: Список успешно сохранен в файл: " + fileName);
+                        } catch (IOException e) {
+                            System.out.println("[ОШИБКА ЗАПИСИ]: Не удалось сохранить данные: " + e.getMessage());
+                        }
                     }
+                } else if (chooseUser == 2) {
+                    break;
+                } else {
+                    System.out.println("Некорректный ввод. Пожалуйста, выберите 1 или 2.");
                 }
             }
 
             if (!customList.isEmpty()) {
-                System.out.print("\nПосчитать, сколько раз элемент встречается в списке (многопоточно)? (1 - да, 2 - нет): ");
-                chooseUser = readDataFromUser();
 
-                if (chooseUser == 1) {
-                    int index;
-                    while (true) {
-                        System.out.print("Введите номер элемента (1-" + customList.size() + "): ");
-                        index = readDataFromUser();
-                        if (index >= 1 && index <= customList.size()) {
-                            break;
+                while (true) {
+
+                    System.out.print("\nПосчитать, сколько раз элемент встречается в списке (многопоточно)? (1 - да, 2 - нет): ");
+                    chooseUser = readDataFromUser();
+
+                    if (chooseUser == 1) {
+                        int index;
+
+                        while (true) {
+                            System.out.print("Введите номер элемента (1-" + customList.size() + "): ");
+                            index = readDataFromUser();
+                            if (index >= 1 && index <= customList.size()) {
+                                break;
+                            }
+
+                            System.out.println("Нет элемента с таким номером. Повторите попытку.");
                         }
-                        System.out.println("Нет элемента с таким номером. Повторите попытку.");
-                    }
 
-                    Automobile target = customList.get(index - 1);
-                    ParallelOccurrenceCounter.countOccurrences(customList, target, 4);
+                        Automobile target = customList.get(index - 1);
+                        ParallelOccurrenceCounter.countOccurrences(customList, target, 4);
+                    }
                 }
             }
 
@@ -140,9 +158,28 @@ public class UserInterface {
     }
 
     private static boolean exitProgram() {
-        System.out.print("Введите слово exit для завершения программы: ");
-        String closeProgram = scanner.nextLine().trim();
-        return !closeProgram.contains("exit");
+
+        while (true) {
+
+            System.out.print("\nВернуться в меню или завершить работу? (1 - в меню, 2 - выйти): ");
+            int choose = readDataFromUser();
+
+            if (choose == 1) {
+                return true;
+            } else if (choose == 2) {
+                System.out.print("Введите слово exit для подтверждения выхода: ");
+                String closeProgram = scanner.nextLine().trim();
+
+                if ("exit".equalsIgnoreCase(closeProgram)) {
+                    System.out.println("Программа завершена.");
+                    return false;
+                } else {
+                    System.out.println("Ошибка: введено не 'exit'. Возврат к выбору действия.");
+                }
+            } else {
+                System.out.println("Некорректный выбор. Пожалуйста, введите 1 или 2.");
+            }
+        }
     }
 
     private static void outputList(CustomList<Automobile> customList) {

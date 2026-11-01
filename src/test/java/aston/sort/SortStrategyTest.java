@@ -18,6 +18,7 @@ public class SortStrategyTest {
             sortsByPower(strategy);
             sortsByModel(strategy);
             sortsByYear(strategy);
+            sortsByAllFields(strategy);
             keepsOrderOfEqualElements(strategy);
             sortsNumbersWithDuplicates(strategy);
             sortsAlreadySortedList(strategy);
@@ -54,6 +55,19 @@ public class SortStrategyTest {
         strategy.sort(cars, AutomobileComparators.BY_YEAR);
         check("по году", before, models(cars, Automobile::getYear),
                 "Audi(2012) Lada(2015) Kia(2018) BMW(2020)");
+    }
+    /// Сначала по модели, при одинаковой модели по мощности, при одинаковой мощности по году.
+    private static void sortsByAllFields(SortStrategy strategy) {
+        CustomList<Automobile> cars = new CustomList<>();
+        cars.add(car("BMW", 340, 2022));
+        cars.add(car("Audi", 190, 2019));
+        cars.add(car("Audi", 150, 2021));
+        cars.add(car("BMW", 340, 2018));
+        cars.add(car("Audi", 190, 2015));
+        String before = allFields(cars);
+        strategy.sort(cars, AutomobileComparators.BY_ALL);
+        check("по всем полям", before, allFields(cars),
+                "Audi(150,2021) Audi(190,2015) Audi(190,2019) BMW(340,2018) BMW(340,2022)");
     }
     /// Opel и Kia с одинаковой мощностью 120 должны остаться в исходном порядке.
     private static void keepsOrderOfEqualElements(SortStrategy strategy) {
@@ -103,6 +117,16 @@ public class SortStrategyTest {
         String before = text(nums);
         strategy.sort(nums, Integer::compare);
         check(name, before, text(nums), expected);
+    }
+    /// Модель вместе с мощностью и годом, например `Audi(190,2015)`.
+    private static String allFields(CustomList<Automobile> cars) {
+        StringBuilder sb = new StringBuilder();
+        for (Automobile car : cars) {
+            if (!sb.isEmpty()) sb.append(" ");
+            sb.append(car.getModel()).append('(').append(car.getPower())
+                    .append(',').append(car.getYear()).append(')');
+        }
+        return sb.toString();
     }
     /// Четыре машины - общие данные для тестов по полям.
     private static CustomList<Automobile> cars() {

@@ -9,7 +9,7 @@ public class SortTestsTest {
     void sortingAlgorithmsPassAllChecks() {
         SortStrategyTest.main(new String[0]);
         assertEquals(0, SortTestHelper.failedCount(), "есть упавшие проверки - смотри вывод выше");
-        assertEquals(20, SortTestHelper.passedCount(), "выполнились не все проверки");
+        assertEquals(22, SortTestHelper.passedCount(), "выполнились не все проверки");
     }
 
     @Test

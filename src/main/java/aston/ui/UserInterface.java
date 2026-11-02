@@ -9,6 +9,7 @@ import aston.util.ParallelOccurrenceCounter;
 import aston.stream.StreamDataFiller;
 import aston.util.CustomList;
 import java.io.IOException;
+import java.nio.file.InvalidPathException;
 import java.util.Comparator;
 import java.util.Scanner;
 
@@ -85,18 +86,24 @@ public class UserInterface {
             outputList(customList);
 
             if (askYesNo("\nХотите сохранить этот отсортированный список в файл?")) {
-                System.out.print("Введите путь или имя файла для сохранения (например, output.csv): ");
-                String fileName = scanner.nextLine().trim();
+                while (true) {
+                    System.out.print("Введите путь или имя файла для сохранения (например, output.csv): ");
+                    String fileName = scanner.nextLine().trim();
 
-                if (fileName.isEmpty()) {
-                    System.out.println("[ОШИБКА]: Имя файла не может быть пустым. Сохранение отменено.");
-                } else {
+                    if (fileName.isEmpty()) {
+                        System.out.println("Сохранение отменено.");
+                        break;
+                    }
+
                     try {
                         java.nio.file.Path outputPath = java.nio.file.Paths.get(fileName);
                         AutomobileFileWriter.appendAll(outputPath, customList);
                         System.out.println("[УСПЕХ]: Список успешно сохранен в файл: " + fileName);
+                        break;
+                    } catch (InvalidPathException e) {
+                        System.out.println("[ОШИБКА]: Недопустимое имя файла: " + fileName + ". Попробуйте снова.");
                     } catch (IOException e) {
-                        System.out.println("[ОШИБКА ЗАПИСИ]: Не удалось сохранить данные: " + e.getMessage());
+                        System.out.println("[ОШИБКА ЗАПИСИ]: Не удалось сохранить данные: " + e.getMessage() + ". Попробуйте снова.");
                     }
                 }
             }
@@ -362,7 +369,7 @@ public class UserInterface {
             try {
                 return Integer.parseInt(scanner.nextLine().trim());
             } catch (NumberFormatException e) {
-                System.out.print("Ошибка: введено не число. Введите число ещё раз: ");
+                System.out.print("Ошибка: введено не число. Введите число: ");
             }
         }
     }

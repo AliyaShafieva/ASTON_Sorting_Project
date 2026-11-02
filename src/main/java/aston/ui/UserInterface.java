@@ -353,6 +353,21 @@ public class UserInterface {
         return customList;
     }
 
+    private static boolean askYesNo(String question) {
+        while (true) {
+            System.out.print(question + " (1 - да, 2 - нет): ");
+            int answer = readDataFromUser();
+
+            if (answer == 1) {
+                return true;
+            }
+            if (answer == 2) {
+                return false;
+            }
+            System.out.println("Нужно ввести 1 (да) или 2 (нет). Повторите попытку.");
+        }
+    }
+
     private static int readDataFromUser() {
         while (true) {
             try {

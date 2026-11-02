@@ -16,8 +16,9 @@ import java.util.Scanner;
 
 public class UserInterface {
 
-    private static final String CYAN = "\u001B[36m";
+    private static final String BOLD = "\u001B[1;97m";
     private static final String RESET = "\u001B[0m";
+
     private static final String[] LIST_EXTENSIONS = {".csv", ".txt"};
     private static final String[] RESULT_EXTENSIONS = {".txt", ".csv"};
 
@@ -195,9 +196,26 @@ public class UserInterface {
     }
 
     private static void outputList(CustomList<Automobile> customList) {
+        String line = BOLD + "+-------+-------------------------+------------+------+" + RESET;
+        String bar = BOLD + "|" + RESET;
+        String rowFormat = bar + " %5s " + bar + " %-23s " + bar + " %5d л.с. " + bar + " %4d " + bar + "%n";
+
+        System.out.println();
+        System.out.println(line);
+        System.out.printf(BOLD + "| %5s | %-23s | %10s | %4s |" + RESET + "%n", "Номер", "Модель", "Мощность", "Год");
+        System.out.println(line);
         for (int i = 0; i < customList.size(); i++) {
-            System.out.printf("%s%4d.|%s %s%n", CYAN, i + 1, RESET, customList.get(i));
+            Automobile car = customList.get(i);
+            System.out.printf(rowFormat, "№" + (i + 1), shorten(car.getModel(), 23), car.getPower(), car.getYear());
         }
+        System.out.println(line);
+    }
+
+    private static String shorten(String text, int maxLength) {
+        if (text.length() <= maxLength) {
+            return text;
+        }
+        return text.substring(0, maxLength - 3) + "...";
     }
 
     private static void sortList(CustomList<Automobile> list, int typeSort) {

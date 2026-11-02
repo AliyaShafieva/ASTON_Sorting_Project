@@ -358,7 +358,7 @@ public class UserInterface {
             try {
                 return Integer.parseInt(scanner.nextLine().trim());
             } catch (NumberFormatException e) {
-                System.out.println("Ошибка: введено не число. Пожалуйста, повторите попытку!");
+                System.out.print("Ошибка: введено не число. Введите число ещё раз: ");
             }
         }
     }

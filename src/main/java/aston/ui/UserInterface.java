@@ -209,6 +209,8 @@ public class UserInterface {
             System.out.printf(rowFormat, "№" + (i + 1), shorten(car.getModel(), 23), car.getPower(), car.getYear());
         }
         System.out.println(line);
+        System.out.printf(BOLD + "| %5s | %-23s | %10s | %4s |" + RESET + "%n", "Номер", "Модель", "Мощность", "Год");
+        System.out.println(line);
     }
 
     private static String shorten(String text, int maxLength) {

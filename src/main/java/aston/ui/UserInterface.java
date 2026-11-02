@@ -123,7 +123,7 @@ public class UserInterface {
 
     private static void saveListStep(CustomList<Automobile> customList) {
         while (true) {
-            System.out.print("Введите путь или имя файла для сохранения (например, output.csv): ");
+            System.out.print("Введите путь или имя файла для сохранения (например, output.csv), Enter - отмена ");
             String fileName = scanner.nextLine().trim();
 
             if (fileName.isEmpty()) {

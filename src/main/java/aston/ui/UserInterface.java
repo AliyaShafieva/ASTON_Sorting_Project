@@ -160,9 +160,9 @@ public class UserInterface {
     }
 
     private static boolean exitProgram() {
-        System.out.print("Введите слово exit для завершения программы: ");
+        System.out.print("Введите слово exit для завершения программы или нажмите Enter, чтобы начать заново: ");
         String closeProgram = scanner.nextLine().trim();
-        return !closeProgram.contains("exit");
+        return !closeProgram.equalsIgnoreCase("exit");
     }
 
     private static void outputList(CustomList<Automobile> customList) {

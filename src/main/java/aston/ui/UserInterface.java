@@ -3,6 +3,7 @@ package aston.ui;
 import aston.core.Automobile;
 import aston.core.AutomobileComparators;
 import aston.io.AutomobileFileWriter;
+import aston.io.CountResultWriter;
 import aston.io.FillArray;
 import aston.sort.*;
 import aston.util.ParallelOccurrenceCounter;
@@ -126,7 +127,25 @@ public class UserInterface {
                     }
 
                     Automobile target = customList.get(index - 1);
-                    ParallelOccurrenceCounter.countOccurrences(customList, target, 4);
+                    long count = ParallelOccurrenceCounter.countOccurrences(customList, target, 4);
+
+                    if (askYesNo("Хотите сохранить результат подсчёта в файл?")) {
+                        System.out.print("Введите путь или имя файла для сохранения (например, result.txt): ");
+                        String fileName = scanner.nextLine().trim();
+
+                        if (fileName.isEmpty()) {
+                            System.out.println("[ОШИБКА]: Имя файла не может быть пустым. Сохранение отменено.");
+                        } else {
+                            try {
+                                CountResultWriter.append(java.nio.file.Paths.get(fileName), target, count);
+                                System.out.println("[УСПЕХ]: Результат дописан в файл: " + fileName);
+                            } catch (InvalidPathException e) {
+                                System.out.println("[ОШИБКА]: Недопустимое имя файла: " + fileName + ". Сохранение отменено.");
+                            } catch (IOException e) {
+                                System.out.println("[ОШИБКА ЗАПИСИ]: Не удалось сохранить результат: " + e.getMessage());
+                            }
+                        }
+                    }
                 }
             }
 

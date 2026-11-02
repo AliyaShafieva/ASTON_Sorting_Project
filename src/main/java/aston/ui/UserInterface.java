@@ -16,8 +16,12 @@ import java.util.Scanner;
 
 public class UserInterface {
 
-    private static final String CYAN = "\u001B[36m";
+    private static final String BOLD = "\u001B[1;97m";
     private static final String RESET = "\u001B[0m";
+
+    private static final String[] LIST_EXTENSIONS = {".csv", ".txt"};
+    private static final String[] RESULT_EXTENSIONS = {".txt", ".csv"};
+
     private static final Scanner scanner = new Scanner(System.in);
     private static boolean isFinish = true;
     private static int targetCapacity = 10;
@@ -123,12 +127,17 @@ public class UserInterface {
 
     private static void saveListStep(CustomList<Automobile> customList) {
         while (true) {
-            System.out.print("Введите путь или имя файла для сохранения (например, output.csv), Enter - отмена ");
+            System.out.print("Введите путь или имя файла для сохранения (например, output.csv), Enter - отмена: ");
             String fileName = scanner.nextLine().trim();
 
             if (fileName.isEmpty()) {
                 System.out.println("Сохранение отменено.");
                 break;
+            }
+
+            fileName = normalizeFileName(fileName, LIST_EXTENSIONS);
+            if (fileName == null) {
+                continue;
             }
 
             try {
@@ -162,11 +171,17 @@ public class UserInterface {
         long count = ParallelOccurrenceCounter.countOccurrences(customList, target, 4);
 
         if (askYesNo("Хотите сохранить результат подсчёта в файл?")) {
-            System.out.print("Введите путь или имя файла для сохранения (например, result.txt): ");
+            System.out.print("Введите путь или имя файла для сохранения (например, result.txt), Enter - отмена: ");
             String fileName = scanner.nextLine().trim();
 
             if (fileName.isEmpty()) {
                 System.out.println("[ОШИБКА]: Имя файла не может быть пустым. Сохранение отменено.");
+                return;
+            }
+
+            fileName = normalizeFileName(fileName, RESULT_EXTENSIONS);
+            if (fileName == null){
+                System.out.println("Сохранение отменено.");
             } else {
                 try {
                     CountResultWriter.append(java.nio.file.Paths.get(fileName), target, count);
@@ -181,9 +196,28 @@ public class UserInterface {
     }
 
     private static void outputList(CustomList<Automobile> customList) {
+        String line = BOLD + "+-------+-------------------------+------------+------+" + RESET;
+        String bar = BOLD + "|" + RESET;
+        String rowFormat = bar + " %5s " + bar + " %-23s " + bar + " %5d л.с. " + bar + " %4d " + bar + "%n";
+
+        System.out.println();
+        System.out.println(line);
+        System.out.printf(BOLD + "| %5s | %-23s | %10s | %4s |" + RESET + "%n", "Номер", "Модель", "Мощность", "Год");
+        System.out.println(line);
         for (int i = 0; i < customList.size(); i++) {
-            System.out.printf("%s%4d.|%s %s%n", CYAN, i + 1, RESET, customList.get(i));
+            Automobile car = customList.get(i);
+            System.out.printf(rowFormat, "№" + (i + 1), shorten(car.getModel(), 23), car.getPower(), car.getYear());
         }
+        System.out.println(line);
+        System.out.printf(BOLD + "| %5s | %-23s | %10s | %4s |" + RESET + "%n", "Номер", "Модель", "Мощность", "Год");
+        System.out.println(line);
+    }
+
+    private static String shorten(String text, int maxLength) {
+        if (text.length() <= maxLength) {
+            return text;
+        }
+        return text.substring(0, maxLength - 3) + "...";
     }
 
     private static void sortList(CustomList<Automobile> list, int typeSort) {
@@ -287,7 +321,7 @@ public class UserInterface {
                 yield true;
             }
             default -> {
-                System.out.println("[ОШИБКА]: Несуществующий пункт длины! Доступны только варианты от 0 до 4. Повторите попытку...");
+                System.out.println("[ОШИБКА]: Несуществующий пункт длины! Доступны только варианты от 0 до 4. Повторите попытку.");
                 yield false;
             }
         };
@@ -386,6 +420,27 @@ public class UserInterface {
                 break;
         }
         return customList;
+    }
+
+    private static String normalizeFileName(String fileName, String[] allowed) {
+        int slash = Math.max(fileName.lastIndexOf('/'), fileName.lastIndexOf('\\'));
+        String name = fileName.substring(slash + 1);
+        int dot = name.lastIndexOf('.');
+
+        if (dot < 0) {
+            return fileName + allowed[0];
+        }
+
+        String extension = name.substring(dot).toLowerCase();
+        for (String allowedExtension : allowed) {
+            if (allowedExtension.equals(extension)) {
+                return fileName;
+            }
+        }
+
+        System.out.println("[ОШИБКА]: Недопустимое расширение \"" + extension + "\". Допустимо: "
+                + String.join(", ", allowed) + ".");
+        return null;
     }
 
     private static boolean askYesNo(String question) {

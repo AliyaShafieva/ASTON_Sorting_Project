@@ -3,17 +3,21 @@ package aston.ui;
 import aston.core.Automobile;
 import aston.core.AutomobileComparators;
 import aston.io.AutomobileFileWriter;
+import aston.io.CountResultWriter;
 import aston.io.FillArray;
 import aston.sort.*;
 import aston.util.ParallelOccurrenceCounter;
 import aston.stream.StreamDataFiller;
 import aston.util.CustomList;
 import java.io.IOException;
+import java.nio.file.InvalidPathException;
 import java.util.Comparator;
 import java.util.Scanner;
 
 public class UserInterface {
 
+    private static final String CYAN = "\u001B[36m";
+    private static final String RESET = "\u001B[0m";
     private static final Scanner scanner = new Scanner(System.in);
     private static boolean isFinish = true;
     private static int targetCapacity = 10;
@@ -65,71 +69,32 @@ public class UserInterface {
                 continue;
             }
 
-            System.out.print("Хотите вывести исходный список? (1 - да, 2 - нет): ");
-            chooseUser = readDataFromUser();
-
-            if (chooseUser == 1) {
-                outputList(customList);
-            } else if (chooseUser != 2) {
-                System.out.println("Некорректный ввод. Вывод списка пропущен.");
+            if (customList.isEmpty()) {
+                System.out.println("[ПРЕДУПРЕЖДЕНИЕ]: Список пуст. Возврат в главное меню...\n");
+                continue;
             }
-            
-            while (true) {
-                System.out.print("Выберите вариант сортировки данных списка (1 - пузырьком, 2 - вставками, 3 - по чётным значениям полей): ");
-                int typeSort = readDataFromUser();
 
-                if (typeSort >= 1 && typeSort <= 3) {
-                    sortList(customList, typeSort);
-                    break;
-                } else {
-                    System.out.println("Такого варианта сортировки не существует. Повторите попытку");
+            boolean newList = false;
+            while (!newList && isFinish) {
+                System.out.println("\nЧто сделать со списком?");
+                System.out.println("1 - вывести список");
+                System.out.println("2 - отсортировать");
+                System.out.println("3 - сохранить список в файл");
+                System.out.println("4 - посчитать, сколько раз элемент встречается в списке (многопоточно)");
+                System.out.println("5 - заполнить новый список");
+                System.out.println("0 - выход из программы");
+                System.out.print("Ваш выбор: ");
+
+                switch (readDataFromUser()) {
+                    case 1 -> outputList(customList);
+                    case 2 -> sortStep(customList);
+                    case 3 -> saveListStep(customList);
+                    case 4 -> countStep(customList);
+                    case 5 -> newList = true;
+                    case 0 -> isFinish = false;
+                    default -> System.out.println("Такого действия нет. Повторите попытку.");
                 }
             }
-
-            System.out.println("\nСписок после сортировки:");
-            outputList(customList);
-
-            System.out.print("\nХотите сохранить этот отсортированный список в файл? (1 - да, 2 - нет): ");
-            chooseUser = readDataFromUser();
-
-            if (chooseUser == 1) {
-                System.out.print("Введите путь или имя файла для сохранения (например, output.csv): ");
-                String fileName = scanner.nextLine().trim();
-
-                if (fileName.isEmpty()) {
-                    System.out.println("[ОШИБКА]: Имя файла не может быть пустым. Сохранение отменено.");
-                } else {
-                    try {
-                        java.nio.file.Path outputPath = java.nio.file.Paths.get(fileName);
-                        AutomobileFileWriter.appendAll(outputPath, customList);
-                        System.out.println("[УСПЕХ]: Список успешно сохранен в файл: " + fileName);
-                    } catch (IOException e) {
-                        System.out.println("[ОШИБКА ЗАПИСИ]: Не удалось сохранить данные: " + e.getMessage());
-                    }
-                }
-            }
-
-            if (!customList.isEmpty()) {
-                System.out.print("\nПосчитать, сколько раз элемент встречается в списке (многопоточно)? (1 - да, 2 - нет): ");
-                chooseUser = readDataFromUser();
-
-                if (chooseUser == 1) {
-                    int index;
-                    while (true) {
-                        System.out.print("Введите номер элемента (1-" + customList.size() + "): ");
-                        index = readDataFromUser();
-                        if (index >= 1 && index <= customList.size()) {
-                            break;
-                        }
-                        System.out.println("Нет элемента с таким номером. Повторите попытку.");
-                    }
-
-                    Automobile target = customList.get(index - 1);
-                    ParallelOccurrenceCounter.countOccurrences(customList, target, 4);
-                }
-            }
-
-            isFinish = exitProgram();
 
             if (isFinish) {
                 for (int i = 0; i < 50; i++) {
@@ -139,15 +104,85 @@ public class UserInterface {
         }
     }
 
-    private static boolean exitProgram() {
-        System.out.print("Введите слово exit для завершения программы: ");
-        String closeProgram = scanner.nextLine().trim();
-        return !closeProgram.contains("exit");
+    private static void sortStep(CustomList<Automobile> customList) {
+        while (true) {
+            System.out.print("Выберите вариант сортировки данных списка (1 - пузырьком, 2 - вставками, 3 - по чётным значениям полей): ");
+            int typeSort = readDataFromUser();
+
+            if (typeSort >= 1 && typeSort <= 3) {
+                sortList(customList, typeSort);
+                break;
+            } else {
+                System.out.println("Такого варианта сортировки не существует. Повторите попытку");
+            }
+        }
+
+        System.out.println("\nСписок после сортировки:");
+        outputList(customList);
+    }
+
+    private static void saveListStep(CustomList<Automobile> customList) {
+        while (true) {
+            System.out.print("Введите путь или имя файла для сохранения (например, output.csv), Enter - отмена ");
+            String fileName = scanner.nextLine().trim();
+
+            if (fileName.isEmpty()) {
+                System.out.println("Сохранение отменено.");
+                break;
+            }
+
+            try {
+                java.nio.file.Path outputPath = java.nio.file.Paths.get(fileName);
+                AutomobileFileWriter.appendAll(outputPath, customList);
+                System.out.println("[УСПЕХ]: Список успешно сохранен в файл: " + fileName);
+                break;
+            } catch (InvalidPathException e) {
+                System.out.println("[ОШИБКА]: Недопустимое имя файла: " + fileName + ". Попробуйте снова.");
+            } catch (IOException e) {
+                System.out.println("[ОШИБКА ЗАПИСИ]: Не удалось сохранить данные: " + e.getMessage() + ". Попробуйте снова.");
+            }
+        }
+    }
+
+    private static void countStep(CustomList<Automobile> customList) {
+        System.out.println("\nСписок для выбора элемента: ");
+        outputList(customList);
+
+        int index;
+        while (true) {
+            System.out.print("Введите номер элемента (1-" + customList.size() + "): ");
+            index = readDataFromUser();
+            if (index >= 1 && index <= customList.size()) {
+                break;
+            }
+            System.out.println("Нет элемента с таким номером. Повторите попытку.");
+        }
+
+        Automobile target = customList.get(index - 1);
+        long count = ParallelOccurrenceCounter.countOccurrences(customList, target, 4);
+
+        if (askYesNo("Хотите сохранить результат подсчёта в файл?")) {
+            System.out.print("Введите путь или имя файла для сохранения (например, result.txt): ");
+            String fileName = scanner.nextLine().trim();
+
+            if (fileName.isEmpty()) {
+                System.out.println("[ОШИБКА]: Имя файла не может быть пустым. Сохранение отменено.");
+            } else {
+                try {
+                    CountResultWriter.append(java.nio.file.Paths.get(fileName), target, count);
+                    System.out.println("[УСПЕХ]: Результат дописан в файл: " + fileName);
+                } catch (InvalidPathException e) {
+                    System.out.println("[ОШИБКА]: Недопустимое имя файла: " + fileName + ". Сохранение отменено.");
+                } catch (IOException e) {
+                    System.out.println("[ОШИБКА ЗАПИСИ]: Не удалось сохранить результат: " + e.getMessage());
+                }
+            }
+        }
     }
 
     private static void outputList(CustomList<Automobile> customList) {
         for (int i = 0; i < customList.size(); i++) {
-            System.out.println(customList.get(i));
+            System.out.printf("%s%4d.|%s %s%n", CYAN, i + 1, RESET, customList.get(i));
         }
     }
 
@@ -353,12 +388,27 @@ public class UserInterface {
         return customList;
     }
 
+    private static boolean askYesNo(String question) {
+        while (true) {
+            System.out.print(question + " (1 - да, 2 - нет): ");
+            int answer = readDataFromUser();
+
+            if (answer == 1) {
+                return true;
+            }
+            if (answer == 2) {
+                return false;
+            }
+            System.out.println("Нужно ввести 1 (да) или 2 (нет). Повторите попытку.");
+        }
+    }
+
     private static int readDataFromUser() {
         while (true) {
             try {
                 return Integer.parseInt(scanner.nextLine().trim());
             } catch (NumberFormatException e) {
-                System.out.println("Ошибка: введено не число. Пожалуйста, повторите попытку!");
+                System.out.print("Ошибка: введено не число. Введите число: ");
             }
         }
     }

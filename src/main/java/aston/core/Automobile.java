@@ -17,7 +17,7 @@ public class Automobile {
 
     @Override
     public String toString() {
-        return "Automobile{" + "model='" + model + '\'' + ", power=" + power + ", year=" + year + '}';
+        return model + " (" + power + " л.с., " + year + " г.)";
     }
 
     public static class Builder {

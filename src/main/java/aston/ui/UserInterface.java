@@ -72,80 +72,16 @@ public class UserInterface {
             if (askYesNo("Хотите вывести исходный список?")) {
                 outputList(customList);
             }
-            
-            while (true) {
-                System.out.print("Выберите вариант сортировки данных списка (1 - пузырьком, 2 - вставками, 3 - по чётным значениям полей): ");
-                int typeSort = readDataFromUser();
 
-                if (typeSort >= 1 && typeSort <= 3) {
-                    sortList(customList, typeSort);
-                    break;
-                } else {
-                    System.out.println("Такого варианта сортировки не существует. Повторите попытку");
-                }
-            }
-
-            System.out.println("\nСписок после сортировки:");
-            outputList(customList);
+            sortStep(customList);
 
             if (askYesNo("\nХотите сохранить этот отсортированный список в файл?")) {
-                while (true) {
-                    System.out.print("Введите путь или имя файла для сохранения (например, output.csv): ");
-                    String fileName = scanner.nextLine().trim();
-
-                    if (fileName.isEmpty()) {
-                        System.out.println("Сохранение отменено.");
-                        break;
-                    }
-
-                    try {
-                        java.nio.file.Path outputPath = java.nio.file.Paths.get(fileName);
-                        AutomobileFileWriter.appendAll(outputPath, customList);
-                        System.out.println("[УСПЕХ]: Список успешно сохранен в файл: " + fileName);
-                        break;
-                    } catch (InvalidPathException e) {
-                        System.out.println("[ОШИБКА]: Недопустимое имя файла: " + fileName + ". Попробуйте снова.");
-                    } catch (IOException e) {
-                        System.out.println("[ОШИБКА ЗАПИСИ]: Не удалось сохранить данные: " + e.getMessage() + ". Попробуйте снова.");
-                    }
-                }
+                saveListStep(customList);
             }
 
             if (!customList.isEmpty()) {
                 if (askYesNo("\nПосчитать, сколько раз элемент встречается в списке (многопоточно)?")) {
-                    System.out.println("\nСписок для выбора элемента: ");
-                    outputList(customList);
-
-                    int index;
-                    while (true) {
-                        System.out.print("Введите номер элемента (1-" + customList.size() + "): ");
-                        index = readDataFromUser();
-                        if (index >= 1 && index <= customList.size()) {
-                            break;
-                        }
-                        System.out.println("Нет элемента с таким номером. Повторите попытку.");
-                    }
-
-                    Automobile target = customList.get(index - 1);
-                    long count = ParallelOccurrenceCounter.countOccurrences(customList, target, 4);
-
-                    if (askYesNo("Хотите сохранить результат подсчёта в файл?")) {
-                        System.out.print("Введите путь или имя файла для сохранения (например, result.txt): ");
-                        String fileName = scanner.nextLine().trim();
-
-                        if (fileName.isEmpty()) {
-                            System.out.println("[ОШИБКА]: Имя файла не может быть пустым. Сохранение отменено.");
-                        } else {
-                            try {
-                                CountResultWriter.append(java.nio.file.Paths.get(fileName), target, count);
-                                System.out.println("[УСПЕХ]: Результат дописан в файл: " + fileName);
-                            } catch (InvalidPathException e) {
-                                System.out.println("[ОШИБКА]: Недопустимое имя файла: " + fileName + ". Сохранение отменено.");
-                            } catch (IOException e) {
-                                System.out.println("[ОШИБКА ЗАПИСИ]: Не удалось сохранить результат: " + e.getMessage());
-                            }
-                        }
-                    }
+                    countStep(customList);
                 }
             }
 
@@ -163,6 +99,82 @@ public class UserInterface {
         System.out.print("Введите слово exit для завершения программы или нажмите Enter, чтобы начать заново: ");
         String closeProgram = scanner.nextLine().trim();
         return !closeProgram.equalsIgnoreCase("exit");
+    }
+
+    private static void sortStep(CustomList<Automobile> customList) {
+        while (true) {
+            System.out.print("Выберите вариант сортировки данных списка (1 - пузырьком, 2 - вставками, 3 - по чётным значениям полей): ");
+            int typeSort = readDataFromUser();
+
+            if (typeSort >= 1 && typeSort <= 3) {
+                sortList(customList, typeSort);
+                break;
+            } else {
+                System.out.println("Такого варианта сортировки не существует. Повторите попытку");
+            }
+        }
+
+        System.out.println("\nСписок после сортировки:");
+        outputList(customList);
+    }
+
+    private static void saveListStep(CustomList<Automobile> customList) {
+        while (true) {
+            System.out.print("Введите путь или имя файла для сохранения (например, output.csv): ");
+            String fileName = scanner.nextLine().trim();
+
+            if (fileName.isEmpty()) {
+                System.out.println("Сохранение отменено.");
+                break;
+            }
+
+            try {
+                java.nio.file.Path outputPath = java.nio.file.Paths.get(fileName);
+                AutomobileFileWriter.appendAll(outputPath, customList);
+                System.out.println("[УСПЕХ]: Список успешно сохранен в файл: " + fileName);
+                break;
+            } catch (InvalidPathException e) {
+                System.out.println("[ОШИБКА]: Недопустимое имя файла: " + fileName + ". Попробуйте снова.");
+            } catch (IOException e) {
+                System.out.println("[ОШИБКА ЗАПИСИ]: Не удалось сохранить данные: " + e.getMessage() + ". Попробуйте снова.");
+            }
+        }
+    }
+
+    private static void countStep(CustomList<Automobile> customList) {
+        System.out.println("\nСписок для выбора элемента: ");
+        outputList(customList);
+
+        int index;
+        while (true) {
+            System.out.print("Введите номер элемента (1-" + customList.size() + "): ");
+            index = readDataFromUser();
+            if (index >= 1 && index <= customList.size()) {
+                break;
+            }
+            System.out.println("Нет элемента с таким номером. Повторите попытку.");
+        }
+
+        Automobile target = customList.get(index - 1);
+        long count = ParallelOccurrenceCounter.countOccurrences(customList, target, 4);
+
+        if (askYesNo("Хотите сохранить результат подсчёта в файл?")) {
+            System.out.print("Введите путь или имя файла для сохранения (например, result.txt): ");
+            String fileName = scanner.nextLine().trim();
+
+            if (fileName.isEmpty()) {
+                System.out.println("[ОШИБКА]: Имя файла не может быть пустым. Сохранение отменено.");
+            } else {
+                try {
+                    CountResultWriter.append(java.nio.file.Paths.get(fileName), target, count);
+                    System.out.println("[УСПЕХ]: Результат дописан в файл: " + fileName);
+                } catch (InvalidPathException e) {
+                    System.out.println("[ОШИБКА]: Недопустимое имя файла: " + fileName + ". Сохранение отменено.");
+                } catch (IOException e) {
+                    System.out.println("[ОШИБКА ЗАПИСИ]: Не удалось сохранить результат: " + e.getMessage());
+                }
+            }
+        }
     }
 
     private static void outputList(CustomList<Automobile> customList) {

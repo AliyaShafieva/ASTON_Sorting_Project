@@ -65,13 +65,8 @@ public class UserInterface {
                 continue;
             }
 
-            System.out.print("Хотите вывести исходный список? (1 - да, 2 - нет): ");
-            chooseUser = readDataFromUser();
-
-            if (chooseUser == 1) {
+            if (askYesNo("Хотите вывести исходный список?")) {
                 outputList(customList);
-            } else if (chooseUser != 2) {
-                System.out.println("Некорректный ввод. Вывод списка пропущен.");
             }
             
             while (true) {
@@ -89,10 +84,7 @@ public class UserInterface {
             System.out.println("\nСписок после сортировки:");
             outputList(customList);
 
-            System.out.print("\nХотите сохранить этот отсортированный список в файл? (1 - да, 2 - нет): ");
-            chooseUser = readDataFromUser();
-
-            if (chooseUser == 1) {
+            if (askYesNo("\nХотите сохранить этот отсортированный список в файл?")) {
                 System.out.print("Введите путь или имя файла для сохранения (например, output.csv): ");
                 String fileName = scanner.nextLine().trim();
 
@@ -110,10 +102,7 @@ public class UserInterface {
             }
 
             if (!customList.isEmpty()) {
-                System.out.print("\nПосчитать, сколько раз элемент встречается в списке (многопоточно)? (1 - да, 2 - нет): ");
-                chooseUser = readDataFromUser();
-
-                if (chooseUser == 1) {
+                if (askYesNo("\nПосчитать, сколько раз элемент встречается в списке (многопоточно)?")) {
                     int index;
                     while (true) {
                         System.out.print("Введите номер элемента (1-" + customList.size() + "): ");

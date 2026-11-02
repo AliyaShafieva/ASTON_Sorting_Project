@@ -15,6 +15,8 @@ import java.util.Scanner;
 
 public class UserInterface {
 
+    private static final String CYAN = "\u001B[36m";
+    private static final String RESET = "\u001B[0m";
     private static final Scanner scanner = new Scanner(System.in);
     private static boolean isFinish = true;
     private static int targetCapacity = 10;
@@ -110,6 +112,9 @@ public class UserInterface {
 
             if (!customList.isEmpty()) {
                 if (askYesNo("\nПосчитать, сколько раз элемент встречается в списке (многопоточно)?")) {
+                    System.out.println("\nСписок для выбора элемента: ");
+                    outputList(customList);
+
                     int index;
                     while (true) {
                         System.out.print("Введите номер элемента (1-" + customList.size() + "): ");
@@ -143,7 +148,7 @@ public class UserInterface {
 
     private static void outputList(CustomList<Automobile> customList) {
         for (int i = 0; i < customList.size(); i++) {
-            System.out.println(customList.get(i));
+            System.out.printf("%s%4d.|%s %s%n", CYAN, i + 1, RESET, customList.get(i));
         }
     }
 

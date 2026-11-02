@@ -69,23 +69,32 @@ public class UserInterface {
                 continue;
             }
 
-            if (askYesNo("Хотите вывести исходный список?")) {
-                outputList(customList);
+            if (customList.isEmpty()) {
+                System.out.println("[ПРЕДУПРЕЖДЕНИЕ]: Список пуст. Возврат в главное меню...\n");
+                continue;
             }
 
-            sortStep(customList);
+            boolean newList = false;
+            while (!newList && isFinish) {
+                System.out.println("\nЧто сделать со списком?");
+                System.out.println("1 - вывести список");
+                System.out.println("2 - отсортировать");
+                System.out.println("3 - сохранить список в файл");
+                System.out.println("4 - посчитать, сколько раз элемент встречается в списке (многопоточно)");
+                System.out.println("5 - заполнить новый список");
+                System.out.println("0 - выход из программы");
+                System.out.print("Ваш выбор: ");
 
-            if (askYesNo("\nХотите сохранить этот отсортированный список в файл?")) {
-                saveListStep(customList);
-            }
-
-            if (!customList.isEmpty()) {
-                if (askYesNo("\nПосчитать, сколько раз элемент встречается в списке (многопоточно)?")) {
-                    countStep(customList);
+                switch (readDataFromUser()) {
+                    case 1 -> outputList(customList);
+                    case 2 -> sortStep(customList);
+                    case 3 -> saveListStep(customList);
+                    case 4 -> countStep(customList);
+                    case 5 -> newList = true;
+                    case 0 -> isFinish = false;
+                    default -> System.out.println("Такого действия нет. Повторите попытку.");
                 }
             }
-
-            isFinish = exitProgram();
 
             if (isFinish) {
                 for (int i = 0; i < 50; i++) {
@@ -93,12 +102,6 @@ public class UserInterface {
                 }
             }
         }
-    }
-
-    private static boolean exitProgram() {
-        System.out.print("Введите слово exit для завершения программы или нажмите Enter, чтобы начать заново: ");
-        String closeProgram = scanner.nextLine().trim();
-        return !closeProgram.equalsIgnoreCase("exit");
     }
 
     private static void sortStep(CustomList<Automobile> customList) {

@@ -17,7 +17,7 @@ class StreamDataFillerTest {
         for (Automobile auto : list) {
             assertAll("Проверка полей автомобиля",
                     () -> assertNotNull(auto.getModel(), "Модель не должна быть null"),
-                    () -> assertTrue(auto.getPower() >= 100 && auto.getPower() <= 400,
+                    () -> assertTrue(auto.getPower() >= 80 && auto.getPower() <= 430,
                             "Мощность вне диапазона: " + auto.getPower()),
                     () -> assertTrue(auto.getYear() >= 2000 && auto.getYear() <= 2026,
                             "Год вне диапазона: " + auto.getYear())

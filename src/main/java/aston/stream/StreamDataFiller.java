@@ -10,12 +10,6 @@ import java.util.Random;
  * Реализует логику заполнения данных через Stream API.
  */
 public class StreamDataFiller {
-
-    /**
-     * Генерирует случайные объекты Automobile и добавляет их в CustomList.
-     * Использует Stream.generate для создания потока данных и limit для ограничения размера.
-     * count количество машин, которые нужно сгенерировать
-     */
     private static final String[] MODELS = {
             "BMW X5", "Toyota Camry", "Audi A4", "Mercedes C-Class",
             "Tesla Model 3", "Ford Mustang", "Honda Civic", "Mazda 6",
@@ -23,6 +17,11 @@ public class StreamDataFiller {
             "Lada Vesta", "Lada Granta", "Lada Niva", "UAZ Patriot",
             "UAZ Hunter", "Moskvich 3", "GAZ Volga", "Lada Largus"
     };
+    /**
+     * Генерирует случайные объекты Automobile и добавляет их в CustomList.
+     * Использует Stream.generate для создания потока данных и limit для ограничения размера.
+     * count количество машин, которые нужно сгенерировать
+     */
     public static CustomList<Automobile> fillCustomList(int count) {
         CustomList<Automobile> customList = new CustomList<>();
         Random random = new Random();
